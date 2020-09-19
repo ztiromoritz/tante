@@ -4,6 +4,7 @@
   "description": "Yet another cli time-tracker",
   "main": "index.js",
   "scripts": {
+    "preversion": "npm test",
     "test": "nyc mocha",
     "test:watch": "mocha --watch"
   },
