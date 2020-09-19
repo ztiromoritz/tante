@@ -1,8 +1,16 @@
 const packageJson = require('./package.json')
 const { program } = require('commander')
-const config = require('./config')
-const { startTask, stopTask, showStatus, showReport, configure, countdown} = require('./actions')
+const moment = require('moment')
+const config = require('./src/config')
+const db = require('./src/db')
+const context = {
+    db,
+    config,
+    logger: console,
+    now : ()=>moment()
+}
 
+const { startTask, stopTask, showStatus, showReport, configure, countdown} = require('./src/actions')
 
 program
     .version(packageJson.version)
@@ -11,32 +19,32 @@ program
 program
     .command('start [task] [time]')
     .description('Start a task')
-    .action(startTask)
+    .action(startTask(context))
 
 program
     .command('stop [time]')
     .description('Stop the current task')
-    .action(stopTask)
+    .action(stopTask(context))
 
 
 program
     .command('status')
     .description('Show current tracking status')
-    .action(showStatus)
+    .action(showStatus(context))
 
 program
     .command('report')
     .description('Show report')
-    .action(showReport)
+    .action(showReport(context))
 
 program
     .command('configure')
     .description('Configure')
-    .action(configure)
+    .action(configure(context))
 
 program
     .action('countdown')
     .description('How long do i still have to work today')
-    .action(countdown)
+    .action(countdown(context))
 
 program.parse(process.argv)
