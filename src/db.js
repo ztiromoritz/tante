@@ -6,7 +6,7 @@ const config = require('./config')
 function ensureDbFile() {
     const filename = config.getDatabaseFile()
     if (!fs.existsSync(filename)) {
-        fs.writeFileSync(filename, '{"version":"alpha","days":[]}')
+        fs.writeFileSync(filename, '{"version":"alpha","days":{}}')
     }
 }
 

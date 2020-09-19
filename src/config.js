@@ -1,8 +1,6 @@
 const fs = require('fs')
 const tempDir = require('temp-dir')
 
-console.log("TempDir", tempDir)
-
 const tanteHomeDir = (process.env.TANTE_USE_TEST_HOME=== 'true')  ? tempDir + '/.tante' : `${process.env.HOME}/.tante`
 const configFile = `${tanteHomeDir}/config.json`
 const databaseDir = `${tanteHomeDir}/db/`
