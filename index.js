@@ -1,16 +1,16 @@
 const packageJson = require('./package.json')
 const { program } = require('commander')
-const moment = require('moment')
+const dayjs = require('dayjs')
 const config = require('./src/config')
 const db = require('./src/db')
 const context = {
     db,
     config,
     logger: console,
-    now : ()=>moment()
+    now : ()=>dayjs()
 }
 
-const { startTask, stopTask, showStatus, showReport, configure, countdown} = require('./src/actions')
+const { startTask, stopTask, showStatus, showReport, configure, countdown, dump, archive} = require('./src/actions')
 
 program
     .version(packageJson.version)
@@ -43,8 +43,18 @@ program
     .action(configure(context))
 
 program
-    .action('countdown')
+    .command('countdown')
     .description('How long do i still have to work today')
     .action(countdown(context))
+
+program
+    .command('dump')
+    .description('Dump the current database')
+    .action(dump(context))
+
+program
+    .command('archive')
+    .description('Dump the current database')
+    .action(archive(context))
 
 program.parse(process.argv)

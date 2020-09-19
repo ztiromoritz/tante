@@ -26,8 +26,8 @@ function loadConfigFile(){
 function readConfig(){
     ensureConfigDir()
     return Object.assign({
-        getDatabaseFile : function(){
-            return `${configDir}/${this.databaseName}.json`
+        getDatabaseFile : function(suffix){
+            return `${configDir}/${this.databaseName}${suffix||''}.json`
         },
         getConfigFile : function(){
             return configFile

@@ -1,10 +1,10 @@
 const assert = require('assert')
-const moment = require('moment')
+const dayjs = require('dayjs')
 const {startTask, stopTask, showStatus, showReport, configure, countdown} = require('../src/actions')
 
 
-const TEST_NOW = "19810723-11:12"
-const TEST_MOMENT = moment(TEST_NOW, 'YYYYMMDD-HH:mm')
+const TEST_NOW = "1981-07-23-11:12"
+const TEST_MOMENT = dayjs(TEST_NOW, 'YYYY-MM-DD-HH:mm')
 
 describe('actions', () => {
     describe('startTask', () => {
@@ -13,13 +13,13 @@ describe('actions', () => {
             const ctx = prepareContext({}, TEST_NOW);
 
             // WHEN
-            startTask(ctx)('start', 'eat')
+            startTask(ctx)('eat')
 
             // THEN
             assertStdOut(ctx, `Task eat started at ${TEST_MOMENT.format("HH:mm")}.\n`)
             assertState(ctx, {
                 days: {
-                    "19810723": [
+                    "1981-07-23": [
                         "11:12|start|eat"
                     ]
                 }
@@ -34,13 +34,13 @@ describe('actions', () => {
             const ctx = prepareContext({}, TEST_NOW)
 
             // WHEN
-            stopTask(ctx)('stop')
+            stopTask(ctx)()
 
             // THEN
             assertStdOut(ctx, `Task stopped.\n`)
             assertState(ctx, {
                 days: {
-                    "19810723": [
+                    "1981-07-23": [
                         "11:12|stop"
                     ]
                 }
@@ -64,7 +64,7 @@ describe('actions', () => {
             // GIVEN
             const ctx = prepareContext({
                 days: {
-                    "19810723": [
+                    "1981-07-23": [
                         "11:30|start|eat",
                         "12:20|stop"
                     ]
@@ -82,7 +82,7 @@ describe('actions', () => {
             // GIVEN
             const ctx = prepareContext({
                 days: {
-                    "19810723": [
+                    "1981-07-23": [
                         "11:30|start|eat",
                         "12:30|start|drink"
                     ]
@@ -127,7 +127,7 @@ const prepareContext = (inputState, currentTime) => {
         error: (str) => _.stdError = `${_.stdError}${str}\n`
     }
 
-    const now = () => moment(currentTime, 'YYYYMMDD-HH:mm')
+    const now = () => dayjs(currentTime, 'YYYY-MM-DD-HH:mm')
 
     return {
         config,

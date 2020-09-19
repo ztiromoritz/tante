@@ -1,9 +1,10 @@
 const config = require('./config')
-
+const DAY_FORMAT = 'YYYY-MM-DD'
+const TIME_FORMAT = 'HH:mm'
 
 const addEntryToState = (state, currentMoment, entry)=>{
-    const currentDay = currentMoment.format("YYYYMMDD")
-    const currentTime = currentMoment.format("HH:mm")
+    const currentDay = currentMoment.format(DAY_FORMAT)
+    const currentTime = currentMoment.format(TIME_FORMAT)
 
     const entries = ensureDay(state, currentDay)
     entries.push(`${currentTime}|${entry}`)
@@ -30,7 +31,7 @@ const getRawEntries = (state, currentDay)=>{
 
 
 const parseEntries = (state, currentMoment)=>{
-    const currentDay = currentMoment.format("YYYYMMDD")
+    const currentDay = currentMoment.format(DAY_FORMAT)
     const rawEntries = getRawEntries(state, currentDay);
     const entries = []
     let current = null
@@ -60,19 +61,16 @@ const parseEntries = (state, currentMoment)=>{
 
 }
 
-
-
-
-const startTask = ({logger,db,config,now}) => (_, task) => {
+const startTask = ({logger,db,config,now}) => (task) => {
     const state = {...db.readState()}
     const currentMoment = now();
-    const currentTime = currentMoment.format("HH:mm")
+    const currentTime = currentMoment.format(TIME_FORMAT)
     addEntryToState(state, currentMoment, `start|${task}`)
     db.writeState(state);
     logger.log(`Task ${task} started at ${currentTime}.`)
 }
 
-const stopTask = ({logger,db,config,now}) => (_, task) => {
+const stopTask = ({logger,db,config,now}) => (task) => {
     const state = {...db.readState()}
     const currentMoment = now();
     addEntryToState(state, currentMoment, `stop`)
@@ -80,7 +78,7 @@ const stopTask = ({logger,db,config,now}) => (_, task) => {
     logger.log(`Task stopped.`)
 }
 
-const showStatus = ({logger,db,config, now}) => (_)=>{
+const showStatus = ({logger,db,config, now}) => ()=>{
     const state = {...db.readState()}
     const currentMoment = now()
     const entries = parseEntries(state, currentMoment)
@@ -90,15 +88,20 @@ const showStatus = ({logger,db,config, now}) => (_)=>{
         const {name, from} = entries.slice(-1)[0]
         logger.log(`Task '${name}' is running since ${from}.`)
     }
-
 }
 
-const showReport= ({logger,db,config}) =>(_)=>{
+const showReport= ({logger,db,config, now}) =>(_)=>{
     const state = {...db.readState()}
     const currentMoment = now();
-    printReport(state, logger, currentMoment)
-
-    logger.log(`Show report`)
+    const entries = parseEntries(state, currentMoment)
+    logger.log(' +-------+-------+-----------------------------+')
+    logger.log(' | from  | to    | task                        |')
+    logger.log(' +-------+-------+-----------------------------+')
+    for(let entry of entries){
+        const {name,from,to} = entry
+        logger.log(` | ${from} | ${to||'     '} | ${name.padEnd(27)} |` )
+    }
+    logger.log(' +-------+-------+-----------------------------+')
 }
 
 const configure = ({logger,db,config}) => (_) =>{
@@ -107,8 +110,18 @@ const configure = ({logger,db,config}) => (_) =>{
     logger.log(`Configuration :\n${JSON.stringify(config,null,2)}`)
 }
 
-function countdown(_){
+const dump = ({logger,db}) => () => {
+    logger.log(JSON.stringify(db.readState(),null,2))
+}
+
+const archive = ({logger, db}) => ()=> {
+    // creates an archive file of the current db
+    // and inits with a fresh db
+    db.archive({logger})
+}
+
+function countdown(){
 
 }
 
-module.exports = {startTask, stopTask, showReport, showStatus, configure, countdown}
+module.exports = {startTask, stopTask, showReport, showStatus, configure, countdown, dump, archive}

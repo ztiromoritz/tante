@@ -1,45 +1,39 @@
 const fs = require('fs')
-const config = require('src/config')
+const dayjs = require('dayjs')
+const config = require('./config')
 
 
-function readState(){
-    // currently a single file is used
+function ensureDbFile() {
     const filename = config.getDatabaseFile()
-    const dataFile = fs.readFileSync(filename);
-    return JSON.parse(dataFile);
-}
-
-function writeState(changedState){
-    const filename = config.getDatabaseFile();
-    fs.writeFileSync(filename,State)
-}
-
-const EXAMPLE_STRUCTURE = {
-    days : {
-        "2020:07:23": {
-            entries : [
-                "08:00:start:task0",
-                "13:30:start:task1",
-                "13:45:stop",
-                "14:00:start:task2",
-                "15:00:"
-            ]
-        }
+    if (!fs.existsSync(filename)) {
+        fs.writeFileSync(filename, '{"version":"alpha","days":[]}')
     }
 }
 
-function readDay(day){
-    if(!day){
-        day = moment.format("YYYY:MM:DD")
+function archive({logger}) {
+    const mainFilename = config.getDatabaseFile()
+    const archiveFilename = config.getDatabaseFile(dayjs().format("YYYY-MM-DD"))
+    if (fs.existsSync(archiveFilename)) {
+        logger.error("There was already an archive created today.")
+    } else {
+        fs.renameSync(mainFilename, archiveFilename)
+        ensureDbFile()
+        logger.log(`Moved ${mainFilename} to ${archiveFilename}.`)
     }
-    return EXAMPLE_STRUCTURE.days[day] || []
 }
 
-function writeDay(day){
-    if(!day){
-        day = moment.format("YYYY:MM:DD")
-    }
+function readState() {
+    // currently a single file is used
+    ensureDbFile()
+    const filename = config.getDatabaseFile()
+    const dataFile = fs.readFileSync(filename)
+    return JSON.parse(dataFile)
 }
 
-module.exports = {readState, writeState}
+function writeState(changedState) {
+    const filename = config.getDatabaseFile()
+    fs.writeFileSync(filename, JSON.stringify(changedState))
+}
 
+
+module.exports = {readState, writeState, archive}
