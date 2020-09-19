@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const packageJson = require('./package.json')
 const { program } = require('commander')
 const moment = require('moment')

@@ -2,7 +2,10 @@
   "name": "tante",
   "version": "0.0.2",
   "description": "Yet another cli time-tracker",
-  "main": "index.js",
+  "main": "./index.js",
+  "bin": {
+    "tante": "./index.js"
+  },
   "scripts": {
     "preversion": "npm test",
     "test": "cross-env TANTE_USE_TEST_HOME=true nyc mocha --reporter nyan",
