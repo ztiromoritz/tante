@@ -129,10 +129,10 @@ const dump = ({logger,db}) => () => {
     logger.log(JSON.stringify(db.readState(),null,2))
 }
 
-const archive = ({logger, db}) => ()=> {
+const archive = ({logger, db, now}) => ()=> {
     // creates an archive file of the current db
     // and inits with a fresh db
-    db.archive({logger})
+    db.archive({logger, now})
 }
 
 function countdown(){
