@@ -1,16 +1,17 @@
 const assert = require('assert')
-const dayjs = require('dayjs')
+const moment = require('moment')
+const {assertState, assertStdOut, prepareContext} = require("./utils");
 const {startTask, stopTask, showStatus, showReport, configure, countdown} = require('../src/actions')
 
 
 const TEST_NOW = "1981-07-23-11:12"
-const TEST_MOMENT = dayjs(TEST_NOW, 'YYYY-MM-DD-HH:mm')
+const TEST_MOMENT = moment(TEST_NOW, 'YYYY-MM-DD-HH:mm')
 
 describe('actions', () => {
     describe('startTask', () => {
         it('adds an entry and logs', () => {
             // GIVEN
-            const ctx = prepareContext({}, TEST_NOW);
+            const ctx = prepareContext({}, TEST_NOW)
 
             // WHEN
             startTask(ctx)('eat')
@@ -26,10 +27,28 @@ describe('actions', () => {
             })
         })
 
+        it('adds and entry with override time', ()=>{
+            // GIVEN
+            const ctx = prepareContext({}, TEST_NOW)
+
+            // WHEN
+            startTask(ctx)('eat', '13:37')
+
+            // THEN
+            assertStdOut(ctx, `Task eat started at 13:37.\n`)
+            assertState(ctx,{
+                days: {
+                    "1981-07-23" : [
+                        "13:37|start|eat"
+                    ]
+                }
+            })
+        })
+
     })
 
     describe('stopTask', () => {
-        it('adds and entry and logs', () => {
+        it('adds an entry and logs', () => {
             // GIVEN
             const ctx = prepareContext({}, TEST_NOW)
 
@@ -37,11 +56,29 @@ describe('actions', () => {
             stopTask(ctx)()
 
             // THEN
-            assertStdOut(ctx, `Task stopped.\n`)
+            assertStdOut(ctx, `Task stopped at ${TEST_MOMENT.format("HH:mm")}.\n`)
             assertState(ctx, {
                 days: {
                     "1981-07-23": [
                         "11:12|stop"
+                    ]
+                }
+            })
+        })
+
+        it('adds an entry with overrideTime', ()=>{
+            // GIVEN
+            const ctx = prepareContext({}, TEST_NOW)
+
+            // WHEN
+            stopTask(ctx)('13:37')
+
+            // THEN
+            assertStdOut(ctx, `Task stopped at 13:37.\n`)
+            assertState(ctx, {
+                days: {
+                    "1981-07-23": [
+                        "13:37|stop"
                     ]
                 }
             })
@@ -101,39 +138,3 @@ describe('actions', () => {
 })
 
 
-const assertState = (context, expectedResult) => {
-    assert.deepEqual(context._.changedState, expectedResult);
-}
-
-const assertStdOut = (context, expectedStr) => {
-    assert.equal(context._.stdOut, expectedStr);
-}
-
-const prepareContext = (inputState, currentTime) => {
-
-    const _ = {
-        changedState: null,
-        stdOut: '',
-        stdError: ''
-    }
-    const config = {}
-    const db = {
-        readState: () => ({...inputState}),
-        writeState: (changedState) => _.changedState = changedState
-    }
-
-    const logger = {
-        log: (str) => {_.stdOut = `${_.stdOut}${str}\n`},
-        error: (str) => _.stdError = `${_.stdError}${str}\n`
-    }
-
-    const now = () => dayjs(currentTime, 'YYYY-MM-DD-HH:mm')
-
-    return {
-        config,
-        db,
-        logger,
-        now,
-        _
-    }
-}

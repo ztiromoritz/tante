@@ -1,8 +1,22 @@
 const config = require('./config')
+const moment = require('moment')
 const DAY_FORMAT = 'YYYY-MM-DD'
 const TIME_FORMAT = 'HH:mm'
 
-const addEntryToState = (state, currentMoment, entry)=>{
+const getCurrentMoment = (currentMoment, overrideTime) =>{
+    if(overrideTime){
+        const overrideMoment = moment(overrideTime, 'H:m');
+        if(overrideMoment.isValid()){
+            return currentMoment
+                .clone()
+                .hour(overrideMoment.hour())
+                .minute(overrideMoment.minute())
+        }
+    }
+    return currentMoment
+}
+
+const addEntryToState = (state, currentMoment, entry, overrideTime)=>{
     const currentDay = currentMoment.format(DAY_FORMAT)
     const currentTime = currentMoment.format(TIME_FORMAT)
 
@@ -61,21 +75,22 @@ const parseEntries = (state, currentMoment)=>{
 
 }
 
-const startTask = ({logger,db,config,now}) => (task) => {
+const startTask = ({logger,db,config,now}) => (task, time) => {
     const state = {...db.readState()}
-    const currentMoment = now();
+    const currentMoment = getCurrentMoment(now(),time)
     const currentTime = currentMoment.format(TIME_FORMAT)
     addEntryToState(state, currentMoment, `start|${task}`)
     db.writeState(state);
     logger.log(`Task ${task} started at ${currentTime}.`)
 }
 
-const stopTask = ({logger,db,config,now}) => (task) => {
+const stopTask = ({logger,db,config,now}) => (time) => {
     const state = {...db.readState()}
-    const currentMoment = now();
+    const currentMoment = getCurrentMoment(now(),time)
+    const currentTime = currentMoment.format(TIME_FORMAT)
     addEntryToState(state, currentMoment, `stop`)
     db.writeState(state)
-    logger.log(`Task stopped.`)
+    logger.log(`Task stopped at ${currentTime}.`)
 }
 
 const showStatus = ({logger,db,config, now}) => ()=>{

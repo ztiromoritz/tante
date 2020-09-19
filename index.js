@@ -1,13 +1,13 @@
 const packageJson = require('./package.json')
 const { program } = require('commander')
-const dayjs = require('dayjs')
+const moment = require('moment')
 const config = require('./src/config')
 const db = require('./src/db')
 const context = {
     db,
     config,
     logger: console,
-    now : ()=>dayjs()
+    now : ()=>moment()
 }
 
 const { startTask, stopTask, showStatus, showReport, configure, countdown, dump, archive} = require('./src/actions')

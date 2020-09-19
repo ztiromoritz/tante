@@ -1,5 +1,5 @@
 const fs = require('fs')
-const dayjs = require('dayjs')
+const moment = require('moment')
 const config = require('./config')
 
 
@@ -10,9 +10,12 @@ function ensureDbFile() {
     }
 }
 
-function archive({logger}) {
+function archive({logger, now}) {
     const mainFilename = config.getDatabaseFile()
-    const archiveFilename = config.getDatabaseFile(dayjs().format("YYYY-MM-DD"))
+    const currentMoment = now();
+    const suffix = currentMoment.format("-YYYY-MM-DD");
+    const archiveFilename = config.getDatabaseFile(suffix)
+    ensureDbFile()
     if (fs.existsSync(archiveFilename)) {
         logger.error("There was already an archive created today.")
     } else {
