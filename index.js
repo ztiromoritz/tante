@@ -11,7 +11,7 @@ const context = {
     now : ()=>moment()
 }
 
-const { startTask, stopTask, showStatus, showReport, configure, countdown, dump, archive} = require('./src/actions')
+const { startTask, stopTask, showStatus, showReport, configure, countdown, dump, archive, test} = require('./src/actions')
 
 program
     .version(packageJson.version)
@@ -57,5 +57,10 @@ program
     .command('archive')
     .description('Dump the current database')
     .action(archive(context))
+
+program
+    .command('test')
+    .description('Arbitrary new feature to test')
+    .action(test(context))
 
 program.parse(process.argv)

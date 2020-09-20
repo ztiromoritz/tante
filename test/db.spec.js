@@ -11,7 +11,11 @@ const TEST_NOW = "1981-07-23-11:12"
 describe('db', () => {
 
     beforeEach(() => {
-        config.ensureDirs()
+        if (config.getTanteHomeDir().startsWith(tempDir)){
+            config.ensureDirs()
+        }else{
+            assert(false, "this test should only run in tempDir")
+        }
     })
 
     afterEach(() => {
