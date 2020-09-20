@@ -1,7 +1,7 @@
 const config = require('./config')
 const moment = require('moment')
 const {DAY_FORMAT, TIME_FORMAT} = require('./consts')
-const colors = require('colors/safe')
+const colors = require('colors')
 const {parseEntries, getRawEntries, ensureDay, addEntryToState, getCurrentMoment} = require('./action.utils')
 
 const startTask = ({logger, db, config, now}) => (task, time) => {
@@ -38,14 +38,7 @@ const showReport = ({logger, db, config, now}) => (_) => {
     const state = {...db.readState()}
     const currentMoment = now();
     const entries = parseEntries(state, currentMoment)
-    logger.log(' +-------+-------+-----------------------------+')
-    logger.log(' | from  | to    | task                        |')
-    logger.log(' +-------+-------+-----------------------------+')
-    for (let entry of entries) {
-        const {name, from, to} = entry
-        logger.log(` | ${from} | ${to || '     '} | ${name.padEnd(27)} |`)
-    }
-    logger.log(' +-------+-------+-----------------------------+')
+    logger.log(renderEntries(entries, currentMoment))
 }
 
 const configure = ({logger, db, config}) => (_) => {
@@ -68,8 +61,9 @@ function countdown() {
 
 }
 
+const STEP_SIZE_IN_MINUTES = 15 //
 function parseColorMap(state, currentMoment) {
-    const STEP_SIZE_IN_MINUTES = 15
+
     const currentDay = currentMoment.format(DAY_FORMAT)
     const rawEntries = getRawEntries(state, currentDay);
     const entries = (function* gen() {
@@ -111,10 +105,26 @@ function parseColorMap(state, currentMoment) {
     return colorMap
 }
 
-const renderColorMap = (colorMap) => {
-    const fgColors = ['red', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan']
-    const bgColors = ['bgRed', 'bgBrightGreen', 'bgBrightYellow', 'bgBrightBlue', 'bgBrightMagenta', 'bgBrightCyan']
+
+const renderColorBarHeader = (gap,charPerHour)=>{
+    let head = ''
+    for (let i = 0; i < 24; i++) {
+        let hour;
+        if ((i % gap) === 0)
+            hour = ("" + i).padStart(charPerHour)
+        else
+            hour = ''.padStart(charPerHour)
+        let bgColor = (i % 2) ? 'bgBrightBlue' : 'bgBlue';
+        head += colors[bgColor](hour)
+    }
+    return head
+}
+
+const renderColorBar = (colorMap) => {
+    const fgColors = ['brightRed', 'brightMagenta', 'yellow', 'green', 'magenta', 'cyan', 'grey']
+    const bgColors = ['bgBrightRed', 'bgBrightMagenta', 'bgYellow', 'bgGreen', 'bgMagenta', 'bgCyan', 'bgGray']
     const CHAR = "▌" // 1/2 block
+
     let out = ''
     for (let i = 0; i < colorMap.map.length; i += 2) {
         const left = colorMap.map[i] - 1
@@ -126,14 +136,36 @@ const renderColorMap = (colorMap) => {
     return out
 }
 
+
+const renderEntries = (entries, currentMoment) => {
+    let out = ''
+    out += `  ${currentMoment.format("DD.MM.YYYY")}        \n`
+    out += ' +-------+-------+----------------------------+\n'
+    out += ' | from  | to    | time  | task               |\n'
+    out += ' +-------+-------+-------|--------------------+\n'
+    for (let entry of entries) {
+        const {name, from, to, duration} = entry
+        out += ` | ${from} | ${to || '     '} | ${duration || '     '} | ${name.padEnd(18)} |\n`
+    }
+    out += ' +-------+-------+---------+------------------+\n'
+    return out
+}
+
 const test = ({state, logger, db, now}) => () => {
     const state = {...db.readState()}
     const currentMoment = now();
+
+    // Table
+    const entries = parseEntries(state, currentMoment)
+
+    logger.log(renderEntries(entries, currentMoment))
+
+    // Bar
     const colorMap = parseColorMap(state, currentMoment)
-    const colorBar = renderColorMap(colorMap)
+    const colorBarHeader = renderColorBarHeader(2,2)
+    logger.log(colorBarHeader)
+    const colorBar = renderColorBar(colorMap)
     logger.log(colorBar)
-    logger.log(colorBar.length)
-    logger.log(colorMap.map.length)
 }
 
 module.exports = {startTask, stopTask, showReport, showStatus, configure, countdown, dump, archive, test}
