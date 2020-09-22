@@ -15,24 +15,39 @@ const parseEntries = (state, currentMoment) => {
     for (let rawEntry of rawEntries) {
         const [time, command, name] = rawEntry.split('|')
         if (command === 'start') {
-            if (current && current.name != name) {
-                current.to = time
-                current.duration = calcDuration(current.from, current.to)
-                entries.push(current)
-            }
-            current = {
-                name,
-                from: time
+            if(!current){
+                // There is no new task so start a new one
+                current = {
+                    name,
+                    from: time
+                }
+            }else{
+                // There is a runing task
+                if(current.name != name){
+                    // new task stops the current
+                    current.to = time
+                    current.duration = calcDuration(current.from, current.to)
+                    entries.push(current)
+
+                    // and starts a new one
+                    current = {
+                        name,
+                        from: time
+                    }
+                }
+                // otherwise same task repeated does nothing
             }
         } else if (command === 'stop') {
             if (current) {
+                // stop the running task
                 current.to = time
                 current.duration = calcDuration(current.from, current.to)
                 entries.push(current)
+                current = null;
             }
-            current = null;
         }
     }
+    // push the last pending entry
     if (current) {
         entries.push(current)
     }
