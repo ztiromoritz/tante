@@ -18,10 +18,10 @@ describe('action.utils',()=>{
             // assert(entries.length === 0) // TODO chai assert
         })
 
-        it('open task', ()=>{
-            const state = createState(["01:00|start|dodo"])
+        it('open task in future', ()=>{
+            const state = createState(["23:00|start|dodo"])
             const entries = parseEntries(state, TEST_MOMENT)
-            assert.deepEqual(entries, [{from: "01:00", name: "dodo"}])
+            assert.deepEqual(entries, [{from: "23:00", name: "dodo"}])
         })
 
         it('only stop', ()=>{
@@ -35,7 +35,23 @@ describe('action.utils',()=>{
 
         })
 
-        it('nteresting example 1', ()=>{
+        it("last entry is currently running", ()=>{
+            // GIVEN
+            const state = createState([
+                "09:29|start|abc",
+                "13:47|stop",
+                "18:00|start|def"])
+
+            // WHEN
+            const entries = parseEntries(state, TEST_MOMENT)
+            // THEN
+            assert.deepEqual(entries, [
+                {from: "09:29", to: "13:47", name: "abc", duration: "04:18"},
+                {from: "18:00", toNow: "18:03", name: "def", durationNow: "00:03"}
+            ])
+        })
+
+        it('interesting example 1', ()=>{
             // GIVEN
             const state = createState([
                 "09:29|start|abc",

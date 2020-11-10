@@ -34,8 +34,8 @@ program
     .action(showStatus(context))
 
 program
-    .command('report')
-    .description('Show report')
+    .command('report [from] [to]')
+    .description('Show report. From and to givean as dd.mm')
     .action(showReport(context))
 
 program

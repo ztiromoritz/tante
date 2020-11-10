@@ -1,8 +1,10 @@
+
+
 const config = require('./config')
 const moment = require('moment')
 const {DAY_FORMAT, TIME_FORMAT} = require('./consts')
 const colors = require('colors')
-const {parseEntries, getRawEntries, ensureDay, addEntryToState, getCurrentMoment} = require('./action.utils')
+const {parseEntries, getRawEntries, ensureDay, addEntryToState, getCurrentMoment, sumDuration, formatDuration } = require('./action.utils')
 
 const startTask = ({logger, db, config, now}) => (task, time) => {
     const state = {...db.readState()}
@@ -34,11 +36,21 @@ const showStatus = ({logger, db, config, now}) => () => {
     }
 }
 
-const showReport = ({logger, db, config, now}) => (_) => {
+const showReport = ({logger, db, config, now}) => (from, to) => {
+    const days = []
+    if(from && to){
+
+    }else if(from){
+
+    }else{
+        days.push(now())
+    }
     const state = {...db.readState()}
-    const currentMoment = now();
-    const entries = parseEntries(state, currentMoment)
-    logger.log(renderEntries(entries, currentMoment))
+    days.forEach((day)=>{
+        const entries = parseEntries(state, day)
+        const sum = sumDuration(entries)
+        logger.log(renderEntries(entries, day, {sum}))
+    })
 }
 
 const configure = ({logger, db, config}) => (_) => {
@@ -57,8 +69,27 @@ const archive = ({logger, db, now}) => () => {
     db.archive({logger, now})
 }
 
-function countdown() {
+const countdown = ({logger, db, config, now}) => () => {
+    const days = []
 
+    const targetPerDay = config.targetPerDay || "8:00"
+
+    const state = {...db.readState()}
+    const day = now()
+
+    const entries = parseEntries(state, day)
+    const sum = sumDuration(entries)
+    const durationSum = moment.duration(sum, 'HH:mm');
+    const durationTarget = moment.duration(targetPerDay, 'HH:mm');
+    const diff = durationTarget.subtract(durationSum)
+
+    logger.log('Time spent today   '+ sum )
+
+    if(diff.minutes() > 0){
+        logger.log('Time to go         '+formatDuration(diff))
+    }else{
+        logger.log('Overtime           '+formatDuration(diff))
+    }
 }
 
 const STEP_SIZE_IN_MINUTES = 15 //
@@ -137,17 +168,19 @@ const renderColorBar = (colorMap) => {
 }
 
 
-const renderEntries = (entries, currentMoment) => {
-    let out = ''
+const renderEntries = (entries, currentMoment, {sum}) => {
+    let out = '\n'
     out += `  ${currentMoment.format("DD.MM.YYYY")}        \n`
-    out += ' +-------+-------+----------------------------+\n'
+    out += ' +-------+-------+-------+--------------------+\n'
     out += ' | from  | to    | time  | task               |\n'
     out += ' +-------+-------+-------|--------------------+\n'
     for (let entry of entries) {
-        const {name, from, to, duration} = entry
-        out += ` | ${from} | ${to || '     '} | ${duration || '     '} | ${name.padEnd(18)} |\n`
+        const {name, from, to, toNow, duration, durationNow} = entry
+        out += ` | ${from} | ${ to || toNow ||'     '} | ${duration || durationNow ||'     '} | ${name.padEnd(18)} |\n`
     }
-    out += ' +-------+-------+---------+------------------+\n'
+    out += ' +-------+-------+-------+--------------------+\n'
+    out += ` |       |       | ${ sum } | ${"∑".padEnd(18)} |\n`
+    out += ' +-------+-------+-------+--------------------+\n'
     return out
 }
 

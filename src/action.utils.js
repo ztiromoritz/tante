@@ -1,36 +1,57 @@
 const moment = require('moment')
 const {DAY_FORMAT, TIME_FORMAT} = require('./consts')
 
+const formatDuration = (duration)=>{
+    if(duration.asSeconds() > 0){
+        return `${duration.get('hours').toString().padStart(2,'0')}:${duration.get('minutes').toString().padStart(2,'0')}`
+    }else {
+        return `${(-duration.get('hours')).toString().padStart(2,'0')}:${(-duration.get('minutes')).toString().padStart(2,'0')}`
+    }
+   return
+}
 
 const calcDuration = (from, to) => {
     const duration = moment.duration(moment(to, 'HH:mm').diff(moment(from, 'HH:mm')))
-    return `${duration.get('hours').toString().padStart(2,'0')}:${duration.get('minutes').toString().padStart(2,'0')}`
+    return formatDuration(duration);
 }
+
+const sumDuration = (entries) => {
+    const durationSum = entries
+        .map(_ => ( _.duration || _.durationNow) )
+        .filter(Boolean)
+        .map(_=>moment.duration(_,'HH:mm'))
+        .reduce((sum, current) =>{
+            return sum.add(current)
+        }, moment.duration(0))
+    return formatDuration(durationSum);
+}
+
 
 const parseEntries = (state, currentMoment) => {
     const currentDay = currentMoment.format(DAY_FORMAT)
+    const currentTime = currentMoment.format(TIME_FORMAT)
     const rawEntries = getRawEntries(state, currentDay);
     const entries = []
-    let current = null
+    let currentEntry = null
     for (let rawEntry of rawEntries) {
         const [time, command, name] = rawEntry.split('|')
         if (command === 'start') {
-            if(!current){
+            if(!currentEntry){
                 // There is no new task so start a new one
-                current = {
+                currentEntry = {
                     name,
                     from: time
                 }
             }else{
                 // There is a runing task
-                if(current.name != name){
+                if(currentEntry.name != name){
                     // new task stops the current
-                    current.to = time
-                    current.duration = calcDuration(current.from, current.to)
-                    entries.push(current)
+                    currentEntry.to = time
+                    currentEntry.duration = calcDuration(currentEntry.from, currentEntry.to)
+                    entries.push(currentEntry)
 
                     // and starts a new one
-                    current = {
+                    currentEntry = {
                         name,
                         from: time
                     }
@@ -38,18 +59,25 @@ const parseEntries = (state, currentMoment) => {
                 // otherwise same task repeated does nothing
             }
         } else if (command === 'stop') {
-            if (current) {
+            if (currentEntry) {
                 // stop the running task
-                current.to = time
-                current.duration = calcDuration(current.from, current.to)
-                entries.push(current)
-                current = null;
+                currentEntry.to = time
+                currentEntry.duration = calcDuration(currentEntry.from, currentEntry.to)
+                entries.push(currentEntry)
+                currentEntry = null;
             }
         }
     }
     // push the last pending entry
-    if (current) {
-        entries.push(current)
+    if (currentEntry) {
+        const currentTimeMoment = moment(currentTime, 'HH:mm');
+        const startOfCurrentEntry = moment(currentEntry.from, 'HH:mm');
+        if(startOfCurrentEntry.isBefore(currentTimeMoment)){
+            currentEntry.toNow = currentTime
+            currentEntry.durationNow = calcDuration(currentEntry.from, currentTime)
+        }
+
+        entries.push(currentEntry)
     }
     return entries
 }
@@ -95,4 +123,4 @@ const getRawEntries = (state, currentDay) => {
 }
 
 
-module.exports = {parseEntries, getRawEntries, ensureDay, addEntryToState, getCurrentMoment}
+module.exports = {parseEntries, getRawEntries, ensureDay, addEntryToState, getCurrentMoment, sumDuration, formatDuration}
