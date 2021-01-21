@@ -35,7 +35,7 @@ program
 
 program
     .command('report [from] [to]')
-    .description('Show report. From and to givean as dd.mm')
+    .description('Show report. From and to given as dd.mm')
     .action(showReport(context))
 
 program
@@ -44,7 +44,7 @@ program
     .action(configure(context))
 
 program
-    .command('countdown')
+    .command('countdown [day|week]')
     .description('How long do i still have to work today')
     .action(countdown(context))
 

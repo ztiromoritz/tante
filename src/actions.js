@@ -1,10 +1,16 @@
-
-
 const config = require('./config')
 const moment = require('moment')
 const {DAY_FORMAT, TIME_FORMAT} = require('./consts')
 const colors = require('colors')
-const {parseEntries, getRawEntries, ensureDay, addEntryToState, getCurrentMoment, sumDuration, formatDuration } = require('./action.utils')
+const {
+    parseEntries,
+    getRawEntries,
+    ensureDay,
+    addEntryToState,
+    getCurrentMoment,
+    sumDuration,
+    formatDuration
+} = require('./action.utils')
 
 const startTask = ({logger, db, config, now}) => (task, time) => {
     const state = {...db.readState()}
@@ -38,15 +44,15 @@ const showStatus = ({logger, db, config, now}) => () => {
 
 const showReport = ({logger, db, config, now}) => (from, to) => {
     const days = []
-    if(from && to){
+    if (from && to) {
 
-    }else if(from){
+    } else if (from) {
 
-    }else{
+    } else {
         days.push(now())
     }
     const state = {...db.readState()}
-    days.forEach((day)=>{
+    days.forEach((day) => {
         const entries = parseEntries(state, day)
         const sum = sumDuration(entries)
         logger.log(renderEntries(entries, day, {sum}))
@@ -69,27 +75,76 @@ const archive = ({logger, db, now}) => () => {
     db.archive({logger, now})
 }
 
-const countdown = ({logger, db, config, now}) => () => {
-    const days = []
 
-    const targetPerDay = config.targetPerDay || "8:00"
+const countdown = ({logger, db, config, now}) => (scope) => {
+    scope = scope || 'day';
 
-    const state = {...db.readState()}
-    const day = now()
-
-    const entries = parseEntries(state, day)
-    const sum = sumDuration(entries)
-    const durationSum = moment.duration(sum, 'HH:mm');
-    const durationTarget = moment.duration(targetPerDay, 'HH:mm');
-    const diff = durationTarget.subtract(durationSum)
-
-    logger.log('Time spent today   '+ sum )
-
-    if(diff.minutes() > 0){
-        logger.log('Time to go         '+formatDuration(diff))
-    }else{
-        logger.log('Overtime           '+formatDuration(diff))
+    const getDiff = (value, target) => {
+        const durationSum = moment.duration(value, 'HH:mm');
+        const durationTarget = moment.duration(target, 'HH:mm');
+        const diff = durationTarget.subtract(durationSum)
+        return diff;
     }
+
+    const getCountDownForWeek = (days) => {
+        const targetPerWeek = config.targetPerWeek || "40:00"
+        const state = {...db.readState()}
+        const allEntries = [];
+        for (let day of days) {
+            const entries = parseEntries(state, day);
+            allEntries.push(...entries);
+        }
+        const sum = sumDuration(allEntries);
+        const diff = getDiff(sum, targetPerWeek);
+        return {sum, diff};
+    }
+
+
+    const getCountdownForDay = (day) => {
+        const targetPerDay = config.targetPerDay || "8:00";
+        const state = {...db.readState()}
+        const entries = parseEntries(state, day)
+        const sum = sumDuration(entries)
+        const diff = getDiff(sum, targetPerDay);
+        return {sum, diff};
+    }
+
+    const getDaysOfThisWeek = (day) => {
+        console.error(day.day());
+        const todayIndex = day.day();
+        const monday = day.clone().subtract(todayIndex - 1, 'days');
+        const days = []
+        for (let n = 0; n < 5; n++) {
+            days.push(monday.clone().add(n, 'days'));
+        }
+        return days;
+    }
+
+
+    const day = now()
+    if (scope === 'week') {
+        const days = getDaysOfThisWeek(day);
+        const {sum, diff} = getCountDownForWeek(days);
+        logger.log('Time spent this week ' + sum)
+        if (diff.minutes() > 0) {
+            logger.log('Time to go           ' + formatDuration(diff))
+        } else {
+            logger.log('Overtime             ' + formatDuration(diff))
+        }
+    } else {
+        if (scope !== 'day') {
+            logger.log(`Unknown scope ${scope} fall back to 'day'.`);
+        }
+        const {sum, diff} = getCountdownForDay(day);
+        logger.log('Time spent today   ' + sum)
+        if (diff.minutes() > 0) {
+            logger.log('Time to go         ' + formatDuration(diff))
+        } else {
+            logger.log('Overtime           ' + formatDuration(diff))
+        }
+    }
+
+
 }
 
 const STEP_SIZE_IN_MINUTES = 15 //
@@ -137,7 +192,7 @@ function parseColorMap(state, currentMoment) {
 }
 
 
-const renderColorBarHeader = (gap,charPerHour)=>{
+const renderColorBarHeader = (gap, charPerHour) => {
     let head = ''
     for (let i = 0; i < 24; i++) {
         let hour;
@@ -168,7 +223,7 @@ const renderColorBar = (colorMap) => {
 }
 
 
-const renderEntries = (entries, currentMoment, {sum}) => {
+const renderEntries = (entries, currentMoment, {sum} = {}) => {
     let out = '\n'
     out += `  ${currentMoment.format("DD.MM.YYYY")}        \n`
     out += ' +-------+-------+-------+--------------------+\n'
@@ -176,10 +231,10 @@ const renderEntries = (entries, currentMoment, {sum}) => {
     out += ' +-------+-------+-------|--------------------+\n'
     for (let entry of entries) {
         const {name, from, to, toNow, duration, durationNow} = entry
-        out += ` | ${from} | ${ to || toNow ||'     '} | ${duration || durationNow ||'     '} | ${name.padEnd(18)} |\n`
+        out += ` | ${from} | ${to || toNow || '     '} | ${duration || durationNow || '     '} | ${name.padEnd(18)} |\n`
     }
     out += ' +-------+-------+-------+--------------------+\n'
-    out += ` |       |       | ${ sum } | ${"∑".padEnd(18)} |\n`
+    out += ` |       |       | ${sum} | ${"∑".padEnd(18)} |\n`
     out += ' +-------+-------+-------+--------------------+\n'
     return out
 }
@@ -190,12 +245,13 @@ const test = ({state, logger, db, now}) => () => {
 
     // Table
     const entries = parseEntries(state, currentMoment)
+    const sum = sumDuration(entries)
 
-    logger.log(renderEntries(entries, currentMoment))
+    logger.log(renderEntries(entries, currentMoment, {sum}))
 
     // Bar
     const colorMap = parseColorMap(state, currentMoment)
-    const colorBarHeader = renderColorBarHeader(2,2)
+    const colorBarHeader = renderColorBarHeader(2, 2)
     logger.log(colorBarHeader)
     const colorBar = renderColorBar(colorMap)
     logger.log(colorBar)
