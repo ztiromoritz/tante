@@ -79,6 +79,8 @@ const archive = ({logger, db, now}) => () => {
 const countdown = ({logger, db, config, now}) => (scope) => {
     scope = scope || 'day';
 
+
+    moment.duration(0).subtract(3,'minutes').get
     const getDiff = (value, target) => {
         const durationSum = moment.duration(value, 'HH:mm');
         const durationTarget = moment.duration(target, 'HH:mm');
@@ -110,7 +112,6 @@ const countdown = ({logger, db, config, now}) => (scope) => {
     }
 
     const getDaysOfThisWeek = (day) => {
-        console.error(day.day());
         const todayIndex = day.day();
         const monday = day.clone().subtract(todayIndex - 1, 'days');
         const days = []

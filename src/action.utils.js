@@ -2,10 +2,14 @@ const moment = require('moment')
 const {DAY_FORMAT, TIME_FORMAT} = require('./consts')
 
 const formatDuration = (duration)=>{
-    if(duration.asSeconds() > 0){
-        return `${duration.get('hours').toString().padStart(2,'0')}:${duration.get('minutes').toString().padStart(2,'0')}`
-    }else {
-        return `${(-duration.get('hours')).toString().padStart(2,'0')}:${(-duration.get('minutes')).toString().padStart(2,'0')}`
+    if(duration.asMinutes() > 0){
+        const hours = Math.floor( duration.asMinutes() / 60);
+        const minutes = duration.asMinutes() % 60;
+        return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`
+    } else {
+        const hours = Math.floor( -duration.asMinutes() / 60);
+        const minutes = -duration.asMinutes() % 60;
+        return `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}`
     }
    return
 }
