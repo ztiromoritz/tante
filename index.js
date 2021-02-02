@@ -19,12 +19,17 @@ program
 
 program
     .command('start [task] [time]')
-    .description('Start a task')
+    .description('Start a task', {
+        task: 'The name or id of the task. Default: ' + config.defaultTask + '.',
+        time: 'The time to start the task on. Given as hh:mm. Default: now.'
+    })
     .action(startTask(context))
 
 program
     .command('stop [time]')
-    .description('Stop the current task')
+    .description('Stop the current task', {
+        time : "The time to stop the current task. Given as hh:mm. Default: now."
+    })
     .action(stopTask(context))
 
 
@@ -35,7 +40,24 @@ program
 
 program
     .command('report [from] [to]')
-    .description('Show report. From and to given as dd.mm')
+    .description(`Show a detailed report as table.
+
+The arguments can be given in two forms. 
+Either as date: 
+ dd.mm 
+ dd.mm.yyyyy
+Or as number relative to today: 
+  -1   (yesterday)  
+  0    (today)
+  2    (the day after tomorrow)`
+        ,
+        {
+            from : `The day to start the report. Default: now`,
+            to: `The day to end the report. Default: now`
+        })
+
+
+
     .action(showReport(context))
 
 program
@@ -55,11 +77,11 @@ program
 
 program
     .command('archive')
-    .description('Dump the current database')
+    .description('Move the current database to an archive file and create a new empty db')
     .action(archive(context))
 
 program
-    .command('test')
+    .command('chart [from] [to]')
     .description('Arbitrary new feature to test')
     .action(test(context))
 
