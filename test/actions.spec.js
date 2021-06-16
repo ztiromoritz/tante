@@ -141,6 +141,63 @@ describe('actions', () => {
         })
     })
 
+    describe('countdown', ()=>{
+
+        it('time to go', ()=>{
+            // GIVEN 
+            const ctx = prepareContext({
+                days: {
+                    "1981-07-23" : [
+                        "10:12|start|eat"
+                    ]
+                }
+            }, TEST_NOW)
+
+            // WHEN 
+            countdown(ctx)()
+
+            // THEN
+            assertStdOut(ctx, "Time spent today   01:00\nTime to go         07:00\nYou are finished   18:12\n")
+
+        })
+
+        it('overtime', ()=>{
+             // GIVEN 
+             const ctx = prepareContext({
+                days: {
+                    "1981-07-23" : [
+                        "0:12|start|eat"
+                    ]
+                }
+            }, TEST_NOW)
+            
+            // WHEN
+            countdown(ctx)()
+
+            // THEN
+            assertStdOut(ctx, "Time spent today   11:00\nOvertime           03:00\nYou were finished  08:12\n")
+        })
+
+        it('scope week', ()=>{
+
+             // GIVEN 
+             const ctx = prepareContext({
+                days: {
+                    "1981-07-23" : [
+                        "0:12|start|eat"
+                    ]
+                }
+            }, TEST_NOW)
+
+            // WHEN 
+            countdown(ctx)('week')
+
+            // THEN
+            assertStdOut(ctx, "Time spent this week 11:00\nTime to go           29:00\n")
+        })
+
+    })
+
 
 })
 

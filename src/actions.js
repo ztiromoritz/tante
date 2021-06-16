@@ -16,6 +16,7 @@ const startTask = ({logger, db, config, now}) => (task, time) => {
     const state = {...db.readState()}
     const currentMoment = getCurrentMoment(now(), time)
     const currentTime = currentMoment.format(TIME_FORMAT)
+    task = task || config.defaultTask
     addEntryToState(state, currentMoment, `start|${task}`)
     db.writeState(state);
     logger.log(`Task ${task} started at ${currentTime}.`)
@@ -83,7 +84,9 @@ const countdown = ({logger, db, config, now}) => (scope) => {
     moment.duration(0).subtract(3,'minutes').get
     const getDiff = (value, target) => {
         const durationSum = moment.duration(value, 'HH:mm');
+        //console.log(durationSum);
         const durationTarget = moment.duration(target, 'HH:mm');
+       // console.log(durationTarget.format());
         const diff = durationTarget.subtract(durationSum)
         return diff;
     }
@@ -127,7 +130,7 @@ const countdown = ({logger, db, config, now}) => (scope) => {
         const days = getDaysOfThisWeek(day);
         const {sum, diff} = getCountDownForWeek(days);
         logger.log('Time spent this week ' + sum)
-        if (diff.minutes() > 0) {
+        if (diff.asMinutes() > 0) {
             logger.log('Time to go           ' + formatDuration(diff))
         } else {
             logger.log('Overtime             ' + formatDuration(diff))
@@ -138,11 +141,15 @@ const countdown = ({logger, db, config, now}) => (scope) => {
         }
         const {sum, diff} = getCountdownForDay(day);
         logger.log('Time spent today   ' + sum)
-        if (diff.minutes() > 0) {
+        const finished = day.add(diff, 'minutes').format('HH:mm');
+        if (diff.asMinutes() > 0) {
             logger.log('Time to go         ' + formatDuration(diff))
+            logger.log('You are finished   ' + finished)
         } else {
             logger.log('Overtime           ' + formatDuration(diff))
+            logger.log('You were finished  ' + finished)
         }
+        
     }
 
 
