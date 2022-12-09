@@ -1,2 +1,12 @@
 #!/usr/bin/env node
-require("./index")
+
+/*
+# DIR="$(dirname "$(readlink -f "$0")")"
+# cd $DIR
+
+# ./node_modules/.bin/ts-node src/index.ts
+
+# node dist/index.js
+*/
+
+require("./dist/index");
