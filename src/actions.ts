@@ -1,8 +1,7 @@
-const config = require("./config");
-const moment = require("moment");
-const { DAY_FORMAT, TIME_FORMAT } = require("./consts");
-const colors = require("colors");
-const {
+import moment, { Moment } from "moment";
+import { DAY_FORMAT, TIME_FORMAT } from "./consts";
+import colors from "colors";
+import {
   parseEntries,
   getRawEntries,
   ensureDay,
@@ -11,33 +10,39 @@ const {
   sumDuration,
   formatDuration,
   getDaysOfThisWeek,
-} = require("./action.utils");
+  TimeInput,
+  DayInput,
+  DurationString,
+  ParsedEntry,
+} from "./action.utils";
+import { Context } from ".";
+import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
 
 const startTask =
-  ({ logger, db, config, now }) =>
-  (task, time) => {
+  ({ logger, db, config, now }: Context) =>
+  (task: TimeInput, time: string) => {
     const state = { ...db.readState() };
     const currentMoment = getCurrentMoment(now(), time);
     const currentTime = currentMoment.format(TIME_FORMAT);
     task = task || config.defaultTask;
-    addEntryToState(state, currentMoment, `start|${task}`);
+    addEntryToState(state, currentMoment, `start|${task}` as RawEntrySuffix);
     db.writeState(state);
     logger.log(`Task ${task} started at ${currentTime}.`);
   };
 
 const stopTask =
-  ({ logger, db, config, now }) =>
-  (time) => {
+  ({ logger, db, config, now }: Context) =>
+  (time: TimeInput) => {
     const state = { ...db.readState() };
     const currentMoment = getCurrentMoment(now(), time);
     const currentTime = currentMoment.format(TIME_FORMAT);
-    addEntryToState(state, currentMoment, `stop`);
+    addEntryToState(state, currentMoment, `stop` as RawEntrySuffix);
     db.writeState(state);
     logger.log(`Task stopped at ${currentTime}.`);
   };
 
 const showStatus =
-  ({ logger, db, config, now }) =>
+  ({ logger, db, config, now }: Context) =>
   () => {
     const state = { ...db.readState() };
     const currentMoment = now();
@@ -51,8 +56,8 @@ const showStatus =
   };
 
 const showReport =
-  ({ logger, db, config, now }) =>
-  (from, to) => {
+  ({ logger, db, config, now }: Context) =>
+  (from: DayInput, to: DayInput) => {
     const days = [];
     if (from && to) {
     } else if (from) {
@@ -69,21 +74,21 @@ const showReport =
   };
 
 const configure =
-  ({ logger, db, config }) =>
-  (_) => {
+  ({ logger, db, config }: Context) =>
+  () => {
     logger.log(`Database file : ${config.getDatabaseFile()}`);
     logger.log(`Config file   : ${config.getConfigFile()}`);
     logger.log(`Configuration :\n${JSON.stringify(config, null, 2)}`);
   };
 
 const dump =
-  ({ logger, db }) =>
+  ({ logger, db }: Context) =>
   () => {
     logger.log(JSON.stringify(db.readState(), null, 2));
   };
 
 const archive =
-  ({ logger, db, now }) =>
+  ({ logger, db, now }: Context) =>
   () => {
     // creates an archive file of the current db
     // and inits with a fresh db
@@ -91,21 +96,21 @@ const archive =
   };
 
 const countdown =
-  ({ logger, db, config, now }) =>
-  (scope) => {
+  ({ logger, db, config, now }: Context) =>
+  (scope: "day" | "week") => {
     scope = scope || "day";
 
     moment.duration(0).subtract(3, "minutes").get;
-    const getDiff = (value, target) => {
-      const durationSum = moment.duration(value, "HH:mm");
+    const getDiff = (value: DurationString, target: DurationString) => {
+      const durationSum = moment.duration(value);
       //console.log(durationSum);
-      const durationTarget = moment.duration(target, "HH:mm");
+      const durationTarget = moment.duration(target);
       // console.log(durationTarget.format());
       const diff = durationTarget.subtract(durationSum);
       return diff;
     };
 
-    const getCountDownForWeek = (days) => {
+    const getCountDownForWeek = (days: Moment[]) => {
       const targetPerWeek = config.targetPerWeek || "40:00";
       const state = { ...db.readState() };
       const allEntries = [];
@@ -118,8 +123,8 @@ const countdown =
       return { sum, diff };
     };
 
-    const getCountdownForDay = (day) => {
-      const targetPerDay = config.targetPerDay || "8:00";
+    const getCountdownForDay = (day: Moment) => {
+      const targetPerDay = (config.targetPerDay || "8:00") as DurationString;
       const state = { ...db.readState() };
       const entries = parseEntries(state, day);
       const sum = sumDuration(entries);
@@ -129,7 +134,7 @@ const countdown =
 
     const day = now();
     if (scope === "week") {
-      const days = getDaysOfThisWeek(day);
+      const days: Moment[] = getDaysOfThisWeek(day);
       const { sum, diff } = getCountDownForWeek(days);
       logger.log("Time spent this week " + sum);
       if (diff.asMinutes() > 0) {
@@ -155,8 +160,8 @@ const countdown =
   };
 
 const STEP_SIZE_IN_MINUTES = 15; //
-function parseColorMap(state, currentMoment) {
-  const currentDay = currentMoment.format(DAY_FORMAT);
+function parseColorMap(state: DBState, currentMoment: Moment) {
+  const currentDay = currentMoment.format(DAY_FORMAT) as NormalizedDayKey;
   const rawEntries = getRawEntries(state, currentDay);
   const entries = (function* gen() {
     yield* rawEntries.map((entry) => {
@@ -168,8 +173,8 @@ function parseColorMap(state, currentMoment) {
   const stepMoment = currentMoment.clone().startOf("day");
   let entry = entries.next().value;
   const colorMap = {
-    knowTasks: ["_NONE_"],
-    map: [],
+    knownTasks: ["_NONE_"],
+    map: [] as number[],
   };
   let currentColor = 0;
 
@@ -180,11 +185,11 @@ function parseColorMap(state, currentMoment) {
       if (entry.action === "stop") {
         currentColor = 0;
       } else if (entry.action === "start") {
-        if (colorMap.knowTasks.includes(entry.task)) {
-          currentColor = colorMap.knowTasks.indexOf(entry.task);
+        if (colorMap.knownTasks.includes(entry.task)) {
+          currentColor = colorMap.knownTasks.indexOf(entry.task);
         } else {
-          currentColor = colorMap.knowTasks.length;
-          colorMap.knowTasks.push(entry.task);
+          currentColor = colorMap.knownTasks.length;
+          colorMap.knownTasks.push(entry.task);
         }
       }
       // next value
@@ -196,19 +201,20 @@ function parseColorMap(state, currentMoment) {
   return colorMap;
 }
 
-const renderColorBarHeader = (gap, charPerHour) => {
+const renderColorBarHeader = (gap: number, charPerHour: number) => {
   let head = "";
   for (let i = 0; i < 24; i++) {
     let hour;
     if (i % gap === 0) hour = ("" + i).padStart(charPerHour);
     else hour = "".padStart(charPerHour);
-    let bgColor = i % 2 ? "bgBrightBlue" : "bgBlue";
+    let bgColor: "bgBrightBlue" | "bgBlue" = i % 2 ? "bgBrightBlue" : "bgBlue";
+    // @ts-expect-error typing file contradicts documentation
     head += colors[bgColor](hour);
   }
   return head;
 };
 
-const renderColorBar = (colorMap) => {
+const renderColorBar = (colorMap: { knownTasks: string[]; map: number[] }) => {
   const fgColors = [
     "brightRed",
     "brightMagenta",
@@ -235,12 +241,17 @@ const renderColorBar = (colorMap) => {
     const right = colorMap.map[i + 1] - 1;
     const fgColor = left < 0 ? "white" : fgColors[left % fgColors.length];
     const bgColor = left < 0 ? "bgWhite" : bgColors[left % fgColors.length];
+    // @ts-expect-error typing file contradicts documentation
     out += colors[fgColor][bgColor](CHAR);
   }
   return out;
 };
 
-const renderEntries = (entries, currentMoment, { sum } = {}) => {
+const renderEntries = (
+  entries: ParsedEntry[],
+  currentMoment: Moment,
+  { sum }: { sum: DurationString }
+) => {
   let out = "\n";
   out += `  ${currentMoment.format("DD.MM.YYYY")}        \n`;
   out += " +-------+-------+-------+--------------------+\n";
@@ -259,7 +270,7 @@ const renderEntries = (entries, currentMoment, { sum } = {}) => {
 };
 
 const test =
-  ({ state, logger, db, now }) =>
+  ({ logger, db, now }: Context) =>
   () => {
     const state = { ...db.readState() };
     const currentMoment = now();

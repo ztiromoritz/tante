@@ -1,12 +1,17 @@
 import fs from "fs";
 import { Context } from ".";
+import { TimeInput } from "./action.utils";
 import config from "./config";
+import { Brand } from "./util-types";
 
-export type TimeEntry = string; // example 08:05|start|mxx
-export type State = {
+export type RawEntrySuffix = Brand<string, "RawEntryPrefix">; // start|mxx
+// Todo: Template types seems to not keep the brands
+export type RawEntry = `${TimeInput}|${RawEntrySuffix}`; // example 08:05|start|mxx
+export type NormalizedDayKey = Brand<string, "NormalizedDayKey">; // format like 2022-07-23
+export type DBState = {
   version: string;
   days: {
-    [date: string]: TimeEntry[];
+    [date: NormalizedDayKey]: RawEntry[];
   };
 };
 
