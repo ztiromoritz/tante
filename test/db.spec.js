@@ -1,81 +1,82 @@
-const db = require('../src/db')
-const config = require('../src/config')
-const fs = require('fs')
-const assert = require('assert')
-const tempDir = require('temp-dir')
-const {prepareContext, assertStdError} = require("./utils");
+const db = require("../src/db");
+const config = require("../src/config");
+const fs = require("fs");
+const assert = require("assert");
+const tempDir = require("temp-dir");
+const { prepareContext, assertStdError } = require("./utils");
 
-const TEST_NOW = "1981-07-23-11:12"
+const TEST_NOW = "1981-07-23-11:12";
 
+describe("db", () => {
+  beforeEach(() => {
+    if (config.getTanteHomeDir().startsWith(tempDir)) {
+      config.ensureDirs();
+    } else {
+      assert(false, "this test should only run in tempDir");
+    }
+  });
 
-describe('db', () => {
+  afterEach(() => {
+    // ensure that we are in test mode and using a temp dir
+    if (config.getTanteHomeDir().startsWith(tempDir)) {
+      fs.rmSync(config.getTanteHomeDir(), { recursive: true });
+    } else {
+      assert(
+        false,
+        "Test does not use temp directory. Set env variable TANTE_USE_TEST_HOME=true."
+      );
+    }
+  });
 
-    beforeEach(() => {
-        if (config.getTanteHomeDir().startsWith(tempDir)){
-            config.ensureDirs()
-        }else{
-            assert(false, "this test should only run in tempDir")
-        }
-    })
+  it("read", () => {
+    // GIVEN
+    fs.writeFileSync(config.getDatabaseFile(), '{"c":"d"}');
 
-    afterEach(() => {
-        // ensure that we are in test mode and using a temp dir
-        if (config.getTanteHomeDir().startsWith(tempDir)) {
-            fs.rmdirSync(config.getTanteHomeDir(), {recursive: true})
-        } else {
-            assert(false, "Test does not use temp directory. Set env variable TANTE_USE_TEST_HOME=true.")
-        }
-    })
+    // WHEN
+    const state = db.readState();
 
-    it('read', () => {
-        // GIVEN
-        fs.writeFileSync(config.getDatabaseFile(), '{"c":"d"}')
+    // THEN
+    assert.deepEqual(state, { c: "d" });
+  });
 
-        // WHEN
-        const state = db.readState()
+  it("write", () => {
+    // WHEN
+    db.writeState({ a: "b" });
 
-        // THEN
-        assert.deepEqual(state, {c: 'd'})
+    // THEN
+    assert(
+      fs.existsSync(config.getDatabaseFile()),
+      "Database file does not exist."
+    );
+    const content = fs.readFileSync(config.getDatabaseFile());
+    assert.deepEqual(JSON.parse(content), { a: "b" });
+  });
 
-    })
+  it("archive", () => {
+    // GIVEN
+    db.writeState({ a: "x" });
+    const filename = config.getDatabaseFile();
+    const archiveFilename = config.getDatabaseFile("-1981-07-23");
+    const initialContent = fs.readFileSync(filename).toString();
+    const ctx = prepareContext({}, TEST_NOW);
 
-    it('write', () => {
-        // WHEN
-        db.writeState({a: 'b'})
+    // WHEN
+    db.archive(ctx);
 
-        // THEN
-        assert(fs.existsSync(config.getDatabaseFile()), "Database file does not exist.")
-        const content = fs.readFileSync(config.getDatabaseFile())
-        assert.deepEqual(JSON.parse(content), {a: 'b'})
-    })
+    // THEN
+    assert(fs.existsSync(filename), "No db file left.");
+    assert(fs.existsSync(archiveFilename), "No archive file created.");
+    const archiveContent = fs.readFileSync(archiveFilename).toString();
+    assert.equal(initialContent, archiveContent);
+  });
 
-    it('archive', () => {
-        // GIVEN
-        db.writeState({a: 'x'})
-        const filename = config.getDatabaseFile()
-        const archiveFilename = config.getDatabaseFile('-1981-07-23')
-        const initialContent = fs.readFileSync(filename).toString()
-        const ctx = prepareContext({}, TEST_NOW)
+  it("No archive twice", () => {
+    const filename = config.getDatabaseFile();
+    const ctx = prepareContext({}, TEST_NOW);
+    db.archive(ctx);
+    db.archive(ctx);
 
-        // WHEN
-        db.archive(ctx)
-
-        // THEN
-        assert(fs.existsSync(filename), "No db file left.")
-        assert(fs.existsSync(archiveFilename), "No archive file created.")
-        const archiveContent = fs.readFileSync(archiveFilename).toString()
-        assert.equal(initialContent, archiveContent)
-
-
-    })
-
-    it('No archive twice', () => {
-        const filename = config.getDatabaseFile()
-        const ctx = prepareContext({}, TEST_NOW)
-        db.archive(ctx)
-        db.archive(ctx)
-
-        // THEN
-        assertStdError(ctx, "There was already an archive created today.\n")
-    })
-})
+    // THEN
+    assertStdError(ctx, "There was already an archive created today.\n");
+  });
+});

@@ -11,7 +11,7 @@
     "build:watch": "tsc -w",
     "preversion": "npm test",
     "test": "cross-env TANTE_USE_TEST_HOME=true nyc mocha -r ts-node/register --reporter nyan",
-    "test:watch": "cross-env TANTE_USE_TEST_HOME=true mocha --watch -r ts-node/register",
+    "test:watch": "cross-env TANTE_USE_TEST_HOME=true mocha --watch --watch-files src/**/*.ts,src/**/*.js,test/**/*.ts,test/**/*.js -r ts-node/register",
     "debug": "node --nolazy --inspect-brk ./dist/index.js"
   },
   "author": "",

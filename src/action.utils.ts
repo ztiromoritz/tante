@@ -4,7 +4,7 @@ import { Brand } from "./util-types";
 const { DAY_FORMAT, TIME_FORMAT } = require("./consts");
 
 export type TimeInput = string; // format like '03:00' or '9:23'  see consts.TIME_FORMAT
-export type DayInput = string; // formats like '2022-11-23' or '23.11' or '23.11.2022' ???
+export type DayInput = Brand<string, "DayInput">; // formats like '2022-11-23' or '23.11' or '23.11.2022' or "-2" for the day before yesterday???
 export type DurationString = Brand<string, "DurationString">; // format 40:22
 export type ParsedEntry = {
   name: string;
@@ -169,3 +169,45 @@ export const getDaysOfThisWeek = (day: Moment) => {
   }
   return days;
 };
+
+const RELATIVE_DAY = /^[-+]?[0-9]+$/;
+const DOT_DATE = /^[0123]?[0-9]\.[01]?[0-9]\.[0-9]{4}$/;
+const DOT_DATE_SHORT = /^[0123]?[0-9]\.[01]?[0-9]\.$/;
+/**
+ * Parse day input which could be:
+ *  "2022-12-23",
+ *  "23.12.2022",
+ *  "23.12.", now has to be given to give to take the current year
+ *  "-2", the day before yesterday, now has to be given
+ *  "0", today, now has to be given
+ *  "3" or "+3" the day after the day after tomorrow, now has to be given
+ */
+export const parseDayInput = (input: DayInput, now?: Moment): Moment => {
+  now = now ?? moment();
+  let result = moment(input, "YYYY-MM-DD", true);
+  if (result && result.isValid()) {
+    return result;
+  }
+
+  if (DOT_DATE.test(input)) {
+    result = moment(input, "D.M.YYYY", true);
+    if (result && result.isValid()) {
+      return result;
+    }
+  }
+
+  if (DOT_DATE_SHORT.test(input)) {
+    result = moment(input, "D.M.", true);
+    if (result && result.isValid() && now) {
+      result.set("year", now.get("year"));
+      return result;
+    }
+  }
+  if (RELATIVE_DAY.test(input)) {
+    const relative = parseInt(input);
+    result = now.clone().add(relative, "day");
+    return result;
+  }
+  return moment.invalid(); // or throw error
+};
+export const dayRange = (from: Moment, to: Moment) => {};
