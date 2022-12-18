@@ -16,6 +16,7 @@ const {
   stopTask,
   showStatus,
   showReport,
+  toCSV,
   configure,
   countdown,
   dump,
@@ -24,6 +25,7 @@ const {
 } = require("./actions");
 
 //program.version(packageJson.version).description(packageJson.description);
+program.storeOptionsAsProperties(true);
 
 program
   .command("start [task] [time]")
@@ -52,10 +54,10 @@ program
 
 The arguments can be given in two forms. 
 Either as date: 
- dd.mm 
+ dd.mm. 
  dd.mm.yyyyy
 Or as number relative to today: 
-  -1   (yesterday)  
+  ~1   (yesterday)  
   0    (today)
   2    (the day after tomorrow)`,
     {
@@ -63,8 +65,27 @@ Or as number relative to today:
       to: `The day to end the report. Default: now`,
     }
   )
-
   .action(showReport(context));
+
+program
+  .command("csv [from] [to]")
+  .description(
+    `Export a detailed report as csv.
+
+The arguments can be given in two forms. 
+Either as date: 
+ dd.mm. 
+ dd.mm.yyyyy
+Or as number relative to today: 
+  ~1   (yesterday)  
+  0    (today)
+  2    (the day after tomorrow)`,
+    {
+      from: `The day to start the report. Default: now`,
+      to: `The day to end the report. Default: now`,
+    }
+  )
+  .action(toCSV(context));
 
 program
   .command("configure")

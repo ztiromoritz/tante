@@ -14,6 +14,10 @@ import {
   DayInput,
   DurationString,
   ParsedEntry,
+  parseDayInput,
+  allDaysInRange,
+  parseDayRange,
+  formatDurationAsNumber,
 } from "./action.utils";
 import { Context } from ".";
 import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
@@ -58,18 +62,29 @@ const showStatus =
 const showReport =
   ({ logger, db, config, now }: Context) =>
   (from: DayInput, to: DayInput) => {
-    const days = [];
-    if (from && to) {
-    } else if (from) {
-      const startDay = now();
-    } else {
-      days.push(now());
-    }
+    const days = parseDayRange({ from, to, now });
     const state = { ...db.readState() };
     days.forEach((day) => {
       const entries = parseEntries(state, day);
-      const sum = sumDuration(entries);
-      logger.log(renderEntries(entries, day, { sum }));
+      const duration = sumDuration(entries);
+      const sum = formatDuration(duration);
+      const sumNumber = formatDurationAsNumber(duration);
+      logger.log(renderEntries(entries, day, { sum, sumNumber }));
+    });
+  };
+
+const toCSV =
+  ({ logger, db, config, now }: Context) =>
+  (from: DayInput, to: DayInput) => {
+    const days = parseDayRange({ from, to, now });
+    const state = { ...db.readState() };
+    logger.log(renderCSVHeader());
+    days.forEach((day) => {
+      const entries = parseEntries(state, day);
+      const duration = sumDuration(entries);
+      const sum = formatDuration(duration);
+      const sumNumber = formatDurationAsNumber(duration);
+      logger.log(renderEntriesAsCSV(entries, day, { sum, sumNumber }));
     });
   };
 
@@ -118,7 +133,7 @@ const countdown =
         const entries = parseEntries(state, day);
         allEntries.push(...entries);
       }
-      const sum = sumDuration(allEntries);
+      const sum = formatDuration(sumDuration(allEntries));
       const diff = getDiff(sum, targetPerWeek);
       return { sum, diff };
     };
@@ -127,7 +142,7 @@ const countdown =
       const targetPerDay = (config.targetPerDay || "8:00") as DurationString;
       const state = { ...db.readState() };
       const entries = parseEntries(state, day);
-      const sum = sumDuration(entries);
+      const sum = formatDuration(sumDuration(entries));
       const diff = getDiff(sum, targetPerDay);
       return { sum, diff };
     };
@@ -250,7 +265,7 @@ const renderColorBar = (colorMap: { knownTasks: string[]; map: number[] }) => {
 const renderEntries = (
   entries: ParsedEntry[],
   currentMoment: Moment,
-  { sum }: { sum: DurationString }
+  { sum, sumNumber }: { sum: DurationString; sumNumber: string }
 ) => {
   let out = "\n";
   out += `  ${currentMoment.format("DD.MM.YYYY")}        \n`;
@@ -269,6 +284,30 @@ const renderEntries = (
   return out;
 };
 
+const renderCSVHeader = () => "date;from;to;time;sum;task;sum_as_h";
+const renderEntriesAsCSV = (
+  entries: ParsedEntry[],
+  currentMoment: Moment,
+  { sum, sumNumber }: { sum: DurationString; sumNumber: string }
+) => {
+  let out = "";
+  for (let entry of entries) {
+    const { name, from, to, toNow, duration, durationNow } = entry;
+    out += [
+      currentMoment.format("DD.MM.YYYY"),
+      from,
+      to || toNow || "",
+      duration || durationNow || "",
+      "",
+      name,
+      "",
+      "\n",
+    ].join(";");
+  }
+  out += `;;;;${sum};;${sumNumber}`;
+  return out;
+};
+
 const test =
   ({ logger, db, now }: Context) =>
   () => {
@@ -277,9 +316,9 @@ const test =
 
     // Table
     const entries = parseEntries(state, currentMoment);
-    const sum = sumDuration(entries);
+    const sum = formatDuration(sumDuration(entries));
 
-    logger.log(renderEntries(entries, currentMoment, { sum }));
+    logger.log(renderEntries(entries, currentMoment, { sum, sumNumber: "0" }));
 
     // Bar
     const colorMap = parseColorMap(state, currentMoment);
@@ -293,6 +332,7 @@ module.exports = {
   startTask,
   stopTask,
   showReport,
+  toCSV,
   showStatus,
   configure,
   countdown,

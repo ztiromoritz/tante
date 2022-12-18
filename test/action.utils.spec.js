@@ -4,6 +4,7 @@ const {
   parseEntries,
   formatDuration,
   parseDayInput,
+  allDaysInRange,
 } = require("../src/action.utils");
 const TEST_NOW = "2021-07-24-18:03";
 const TEST_MOMENT = moment(TEST_NOW, "YYYY-MM-DD-HH:mm");
@@ -211,8 +212,8 @@ describe("action.utils", () => {
       const result = parseDayInput("101.01.");
       assert(!result.isValid(), "Is not valid" + result);
     });
-    it("-4", () => {
-      const result = parseDayInput("-4");
+    it("~4", () => {
+      const result = parseDayInput("~4");
       const expected = moment().subtract(4, "day");
       assert(result.isValid(), "Is valid");
       assert(expected.isSame(result, "day"), assertMessage(expected, result));
@@ -235,11 +236,11 @@ describe("action.utils", () => {
       assert(result.isValid(), "Is valid");
       assert(expected.isSame(result, "day"), assertMessage(expected, result));
     });
-    it("-4 with given now", () => {
+    it("~4 with given now", () => {
       const now = moment("2001-01-23");
-      const result = parseDayInput("+4", now);
+      const result = parseDayInput("~4", now);
 
-      const expected = now.clone().add(4, "day");
+      const expected = now.clone().add(-4, "day");
 
       assert(result.isValid(), "Is valid");
       assert(expected.isSame(result, "day"), assertMessage(expected, result));
@@ -255,6 +256,23 @@ describe("action.utils", () => {
     it("-2. garbage 1", () => {
       const result = parseDayInput("-2.");
       assert(!result.isValid(), "Is not valid" + result);
+    });
+  });
+
+  describe("allDaysInRange", () => {
+    it("one day", () => {
+      const result = allDaysInRange(moment("2022-12-23"), moment("2022-12-23"));
+      assert(result.length === 1, "one day " + result.length);
+    });
+
+    it("empty", () => {
+      const result = allDaysInRange(moment("2022-12-24"), moment("2022-12-23"));
+      assert(result.length === 0, "from after to " + result.length);
+    });
+
+    it("two days", () => {
+      const result = allDaysInRange(moment("2022-12-23"), moment("2022-12-24"));
+      assert(result.length === 2, "two days " + result.length);
     });
   });
 });

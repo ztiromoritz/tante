@@ -1,7 +1,7 @@
 import fs from "fs";
 import { Context } from ".";
 import { TimeInput } from "./action.utils";
-import config from "./config";
+import { config } from "./config";
 import { Brand } from "./util-types";
 
 export type RawEntrySuffix = Brand<string, "RawEntryPrefix">; // start|mxx

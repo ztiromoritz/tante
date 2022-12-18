@@ -1,4 +1,6 @@
-import moment, { Moment, Duration } from "moment";
+import moment, { Moment, Duration, duration } from "moment";
+import { Context } from ".";
+import { config } from "./config";
 import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
 import { Brand } from "./util-types";
 const { DAY_FORMAT, TIME_FORMAT } = require("./consts");
@@ -31,6 +33,12 @@ export const formatDuration = (duration: Duration): DurationString => {
   }
 };
 
+export const formatDurationAsNumber = (duration: Duration): string => {
+  return (Math.round(duration.asHours() * 100) / 100)
+    .toString(10)
+    .replace(".", config.decimalSeparator);
+};
+
 const calcDuration = (from: TimeInput, to: TimeInput) => {
   const duration = moment.duration(
     moment(to, "HH:mm").diff(moment(from, "HH:mm"))
@@ -46,7 +54,7 @@ export const sumDuration = (entries: ParsedEntry[]) => {
     .reduce((sum, current) => {
       return sum.add(current);
     }, moment.duration(0));
-  return formatDuration(durationSum);
+  return durationSum;
 };
 
 export const parseEntries = (state: DBState, currentMoment: Moment) => {
@@ -170,7 +178,7 @@ export const getDaysOfThisWeek = (day: Moment) => {
   return days;
 };
 
-const RELATIVE_DAY = /^[-+]?[0-9]+$/;
+const RELATIVE_DAY = /^[~+]?[0-9]+$/;
 const DOT_DATE = /^[0123]?[0-9]\.[01]?[0-9]\.[0-9]{4}$/;
 const DOT_DATE_SHORT = /^[0123]?[0-9]\.[01]?[0-9]\.$/;
 /**
@@ -204,10 +212,49 @@ export const parseDayInput = (input: DayInput, now?: Moment): Moment => {
     }
   }
   if (RELATIVE_DAY.test(input)) {
-    const relative = parseInt(input);
+    const relative = parseInt(input.replace("~", "-"));
     result = now.clone().add(relative, "day");
     return result;
   }
   return moment.invalid(); // or throw error
 };
-export const dayRange = (from: Moment, to: Moment) => {};
+export const allDaysInRange = (from: Moment, to: Moment): Moment[] => {
+  const result: Moment[] = [];
+  to = to ?? moment();
+  let tmp = from.clone();
+  while (tmp.isSameOrBefore(to, "day")) {
+    result.push(tmp);
+    tmp = tmp.clone().add(1, "day");
+  }
+  return result;
+};
+
+export const parseDayRange = (opts: {
+  from: DayInput;
+  to: DayInput;
+  now: () => Moment;
+}) => {
+  const { from, to, now } = opts;
+  const days = [];
+  if (from && to) {
+    const fromDay = parseDayInput(from);
+    const toDay = parseDayInput(to);
+    if (!fromDay.isValid()) {
+      throw new Error(" [from] is not valid " + from);
+    }
+    if (!toDay.isValid()) {
+      throw new Error(" [to] is not valid " + to);
+    }
+    days.push(...allDaysInRange(fromDay, toDay));
+  } else if (from) {
+    const fromDay = parseDayInput(from);
+    const toDay = now();
+    if (!fromDay.isValid()) {
+      throw new Error(" [from] is not valid " + from);
+    }
+    days.push(...allDaysInRange(fromDay, toDay));
+  } else {
+    days.push(now());
+  }
+  return days;
+};
