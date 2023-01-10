@@ -126,7 +126,8 @@ const countdown =
     };
 
     const getCountDownForWeek = (days: Moment[]) => {
-      const targetPerWeek = config.targetPerWeek || "40:00";
+      const targetPerWeek = (config.targetPerWeek || "40:00") as DurationString;
+
       const state = { ...db.readState() };
       const allEntries = [];
       for (let day of days) {

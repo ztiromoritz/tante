@@ -12,6 +12,8 @@ const DEFAULT_CONFIG = {
   defaultTask: "default",
   databaseName: "db",
   decimalSeparator: ".",
+  targetPerWeek: "40:00",
+  targetPerDay: "8:00",
 };
 
 function ensureDirs() {

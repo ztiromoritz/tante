@@ -1,6 +1,6 @@
 import moment from "moment";
 import { program } from "commander";
-const config = require("./config");
+import { config } from "./config";
 const db = require("./db");
 const context = {
   db,
