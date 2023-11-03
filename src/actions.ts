@@ -269,7 +269,7 @@ const renderEntries = (
   { sum, sumNumber }: { sum: DurationString; sumNumber: string }
 ) => {
   let out = "\n";
-  out += `  ${currentMoment.format("DD.MM.YYYY")}        \n`;
+  out += `  ${currentMoment.format("ddd DD.MM.YYYY")}    \n`;
   out += " +-------+-------+-------+--------------------+\n";
   out += " | from  | to    | time  | task               |\n";
   out += " +-------+-------+-------|--------------------+\n";

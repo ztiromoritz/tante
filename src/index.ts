@@ -11,6 +11,8 @@ const context = {
 
 export type Context = typeof context;
 
+moment.locale(config.locale);
+
 const {
   startTask,
   stopTask,

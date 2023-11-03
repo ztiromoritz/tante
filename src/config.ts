@@ -14,6 +14,7 @@ const DEFAULT_CONFIG = {
   decimalSeparator: ".",
   targetPerWeek: "40:00",
   targetPerDay: "8:00",
+  locale: "en",
 };
 
 function ensureDirs() {
