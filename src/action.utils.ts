@@ -6,7 +6,7 @@ import { Brand } from "./util-types";
 const { DAY_FORMAT, TIME_FORMAT } = require("./consts");
 
 export type TimeInput = string; // format like '03:00' or '9:23'  see consts.TIME_FORMAT
-export type DayInput = Brand<string, "DayInput">; // formats like '2022-11-23' or '23.11' or '23.11.2022' or "-2" for the day before yesterday???
+export type DayInput = Brand<string, "DayInput">; // formats like '2022-11-23' or '23.11' or '23.11.2022' or "~2" for the day before yesterday???
 export type DurationString = Brand<string, "DurationString">; // format 40:22
 export type ParsedEntry = {
   name: string;

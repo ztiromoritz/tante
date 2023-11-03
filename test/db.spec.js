@@ -1,5 +1,5 @@
 const db = require("../src/db");
-const config = require("../src/config");
+const { config } = require("../src/config");
 const fs = require("fs");
 const assert = require("assert");
 const tempDir = require("temp-dir");

@@ -45,6 +45,27 @@ const stopTask =
     logger.log(`Task stopped at ${currentTime}.`);
   };
 
+const fullDay =
+  ({ logger, db, config, now }: Context) =>
+  (fullDayType: "holiday" | "sick") =>
+  (day: DayInput) => {
+    const state = { ...db.readState() };
+    const theDay = (day ? parseDayInput(day) : now()).startOf("day");
+    const fromMoment = theDay.clone().hour(8);
+    const duration = moment.duration(config.targetPerDay);
+    const toMoment = fromMoment.clone().add(duration.asMinutes(), "minutes");
+    addEntryToState(
+      state,
+      fromMoment,
+      `start|${fullDayType}` as RawEntrySuffix
+    );
+    addEntryToState(state, toMoment, `stop` as RawEntrySuffix);
+    db.writeState(state);
+    logger.log(
+      `Fullday of ${fullDayType} added at ${theDay.format("dddd DD.MM.YYYY")}.`
+    );
+  };
+
 const showStatus =
   ({ logger, db, config, now }: Context) =>
   () => {
@@ -285,7 +306,7 @@ const renderEntries = (
   return out;
 };
 
-const renderCSVHeader = () => "date;from;to;time;sum;task;sum_as_h";
+const renderCSVHeader = () => "date      ;from ;to   ;time ;sum  ;sum_as_h";
 const renderEntriesAsCSV = (
   entries: ParsedEntry[],
   currentMoment: Moment,
@@ -299,13 +320,13 @@ const renderEntriesAsCSV = (
       from,
       to || toNow || "",
       duration || durationNow || "",
-      "",
-      name,
-      "",
+      "     ",
+      //name,
+      //"     ",
       "\n",
     ].join(";");
   }
-  out += `;;;;${sum};;${sumNumber}`;
+  out += `          ;     ;     ;     ;${sum};${sumNumber}`;
   return out;
 };
 
@@ -340,4 +361,5 @@ module.exports = {
   dump,
   archive,
   test,
+  fullDay,
 };

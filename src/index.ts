@@ -24,6 +24,7 @@ const {
   dump,
   archive,
   test,
+  fullDay,
 } = require("./actions");
 
 //program.version(packageJson.version).description(packageJson.description);
@@ -48,6 +49,37 @@ program
   .command("status")
   .description("Show current tracking status")
   .action(showStatus(context));
+
+const fullDayDescription = (fullDayType: string) => {
+  return `Set a full workday amount of hours to the given day as ${fullDayType}
+
+Relevant config is targetPerDay (default: 8).
+
+The optional argument can be given in two forms.
+
+The arguments can be given in two forms. 
+Either as date: 
+ dd.mm. 
+ dd.mm.yyyyy
+Or as number relative to today: 
+  ~1   (yesterday)  
+  0    (today)
+  2    (the day after tomorrow)`;
+};
+
+program
+  .command("holiday [day]")
+  .description(fullDayDescription("holiday"), {
+    day: `The day the fullday entry should be set`,
+  })
+  .action(fullDay(context)("holiday"));
+
+program
+  .command("sick [day]")
+  .description(fullDayDescription("sick"), {
+    day: `The day the fullday entry should be set`,
+  })
+  .action(fullDay(context)("sick"));
 
 program
   .command("report [from] [to]")
