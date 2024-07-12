@@ -13,13 +13,13 @@ const assertStdError = (context, expectedStr) => {
   assert.equal(context._.stdError, expectedStr);
 };
 
-const prepareContext = (inputState, currentTime) => {
+const prepareContext = (inputState, currentTime, _config) => {
   const _ = {
     changedState: null,
     stdOut: "",
     stdError: "",
   };
-  const config = {};
+  const config = _config ?? {};
   const db = {
     readState: () => ({ ...inputState }),
     writeState: (changedState) => (_.changedState = changedState),

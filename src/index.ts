@@ -31,10 +31,11 @@ const {
 program.storeOptionsAsProperties(true);
 
 program
-  .command("start [task] [time]")
+  .command("start [timeOrTask] [task]")
   .description("Start a task", {
+    timeOrTask:
+      "The time to start the task on. Given as hh:mm. Default: now. If invalid this will taken as the task.",
     task: "The name or id of the task. Default: " + config.defaultTask + ".",
-    time: "The time to start the task on. Given as hh:mm. Default: now.",
   })
   .action(startTask(context));
 
@@ -97,7 +98,7 @@ Or as number relative to today:
     {
       from: `The day to start the report. Default: now`,
       to: `The day to end the report. Default: now`,
-    }
+    },
   )
   .action(showReport(context));
 
@@ -117,7 +118,7 @@ Or as number relative to today:
     {
       from: `The day to start the report. Default: now`,
       to: `The day to end the report. Default: now`,
-    }
+    },
   )
   .action(toCSV(context));
 
@@ -139,7 +140,7 @@ program
 program
   .command("archive")
   .description(
-    "Move the current database to an archive file and create a new empty db"
+    "Move the current database to an archive file and create a new empty db",
   )
   .action(archive(context));
 

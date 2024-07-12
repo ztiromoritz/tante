@@ -5,13 +5,13 @@ import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
 import { Brand } from "./util-types";
 const { DAY_FORMAT, TIME_FORMAT } = require("./consts");
 
-export type TimeInput = string; // format like '03:00' or '9:23'  see consts.TIME_FORMAT
+export type TimeInput = Brand<string, "TimeInput">; // format like '03:00' or '9:23'  see consts.TIME_FORMAT
 export type DayInput = Brand<string, "DayInput">; // formats like '2022-11-23' or '23.11' or '23.11.2022' or "~2" for the day before yesterday???
 export type DurationString = Brand<string, "DurationString">; // format 40:22
 export type ParsedEntry = {
   name: string;
-  from: string; // ?? TimeInput
-  to: string; // ?? TimeInput
+  from: TimeInput;
+  to: TimeInput;
   duration: string;
   toNow?: string;
   durationNow?: string;
@@ -41,7 +41,7 @@ export const formatDurationAsNumber = (duration: Duration): string => {
 
 const calcDuration = (from: TimeInput, to: TimeInput) => {
   const duration = moment.duration(
-    moment(to, "HH:mm").diff(moment(from, "HH:mm"))
+    moment(to, "HH:mm").diff(moment(from, "HH:mm")),
   );
   return formatDuration(duration);
 };
@@ -59,19 +59,23 @@ export const sumDuration = (entries: ParsedEntry[]) => {
 
 export const parseEntries = (state: DBState, currentMoment: Moment) => {
   const currentDay = currentMoment.format(DAY_FORMAT) as NormalizedDayKey;
-  const currentTime = currentMoment.format(TIME_FORMAT);
+  const currentTime = currentMoment.format(TIME_FORMAT) as TimeInput;
   const rawEntries = getRawEntries(state, currentDay);
   const entries: ParsedEntry[] = [];
   let currentEntry: Partial<ParsedEntry> | null = null;
   for (let rawEntry of rawEntries) {
-    let [time, command, name] = rawEntry.split("|");
+    let [time, command, name] = rawEntry.split("|") as [
+      time: TimeInput,
+      command: string,
+      name: string,
+    ];
     name = name ?? "unknown";
     if (command === "start") {
       if (!currentEntry) {
         // There is no new task so start a new one
         currentEntry = {
           name,
-          from: time,
+          from: time as TimeInput,
         };
       } else {
         // There is a runing task
@@ -80,7 +84,7 @@ export const parseEntries = (state: DBState, currentMoment: Moment) => {
           currentEntry.to = time;
           currentEntry.duration = calcDuration(
             currentEntry.from!, // TODO: can this be undefined
-            currentEntry.to
+            currentEntry.to,
           );
           // TODO: check if it's no longer partial
           entries.push(currentEntry as ParsedEntry);
@@ -99,7 +103,7 @@ export const parseEntries = (state: DBState, currentMoment: Moment) => {
         currentEntry.to = time;
         currentEntry.duration = calcDuration(
           currentEntry.from!, // TODO: can this be undefined
-          currentEntry.to
+          currentEntry.to,
         );
         // TODO: check if it's no longer partial
         entries.push(currentEntry as ParsedEntry);
@@ -121,9 +125,14 @@ export const parseEntries = (state: DBState, currentMoment: Moment) => {
   return entries;
 };
 
+export const isTimeInput = (str: string): TimeInput | null => {
+  const result = moment(str, "HH:mm");
+  return result.isValid() ? (str as TimeInput) : null;
+};
+
 export const getCurrentMoment = (
   currentMoment: Moment,
-  overrideTime: TimeInput
+  overrideTime?: TimeInput,
 ) => {
   if (overrideTime) {
     const overrideMoment = moment(overrideTime, "HH:mm");
@@ -140,7 +149,7 @@ export const getCurrentMoment = (
 export const addEntryToState = (
   state: DBState,
   currentMoment: Moment,
-  entry: RawEntrySuffix
+  entry: RawEntrySuffix,
 ) => {
   const currentDay = currentMoment.format(DAY_FORMAT) as NormalizedDayKey;
   const currentTime = currentMoment.format(TIME_FORMAT);

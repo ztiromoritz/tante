@@ -18,17 +18,28 @@ import {
   allDaysInRange,
   parseDayRange,
   formatDurationAsNumber,
+  isTimeInput,
 } from "./action.utils";
 import { Context } from ".";
 import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
 
 const startTask =
   ({ logger, db, config, now }: Context) =>
-  (task: TimeInput, time: string) => {
+  (timeOrTask: string, task: string) => {
     const state = { ...db.readState() };
-    const currentMoment = getCurrentMoment(now(), time);
-    const currentTime = currentMoment.format(TIME_FORMAT);
-    task = task || config.defaultTask;
+    const time = isTimeInput(timeOrTask);
+    let currentMoment: moment.Moment;
+		let currentTime: string;
+    if (time) {
+      currentMoment = getCurrentMoment(now(), time);
+      currentTime = currentMoment.format(TIME_FORMAT);
+      task = task || config.defaultTask;
+    }else{
+			// interpret first value as task
+			task = timeOrTask || config.defaultTask;
+      currentMoment = getCurrentMoment(now());
+      currentTime = currentMoment.format(TIME_FORMAT);
+		}
     addEntryToState(state, currentMoment, `start|${task}` as RawEntrySuffix);
     db.writeState(state);
     logger.log(`Task ${task} started at ${currentTime}.`);
@@ -57,12 +68,12 @@ const fullDay =
     addEntryToState(
       state,
       fromMoment,
-      `start|${fullDayType}` as RawEntrySuffix
+      `start|${fullDayType}` as RawEntrySuffix,
     );
     addEntryToState(state, toMoment, `stop` as RawEntrySuffix);
     db.writeState(state);
     logger.log(
-      `Fullday of ${fullDayType} added at ${theDay.format("dddd DD.MM.YYYY")}.`
+      `Fullday of ${fullDayType} added at ${theDay.format("dddd DD.MM.YYYY")}.`,
     );
   };
 
@@ -287,7 +298,7 @@ const renderColorBar = (colorMap: { knownTasks: string[]; map: number[] }) => {
 const renderEntries = (
   entries: ParsedEntry[],
   currentMoment: Moment,
-  { sum, sumNumber }: { sum: DurationString; sumNumber: string }
+  { sum, sumNumber }: { sum: DurationString; sumNumber: string },
 ) => {
   let out = "\n";
   out += `  ${currentMoment.format("ddd DD.MM.YYYY")}    \n`;
@@ -310,7 +321,7 @@ const renderCSVHeader = () => "date      ;from ;to   ;time ;sum  ;sum_as_h";
 const renderEntriesAsCSV = (
   entries: ParsedEntry[],
   currentMoment: Moment,
-  { sum, sumNumber }: { sum: DurationString; sumNumber: string }
+  { sum, sumNumber }: { sum: DurationString; sumNumber: string },
 ) => {
   let out = "";
   for (let entry of entries) {

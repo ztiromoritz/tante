@@ -9,12 +9,48 @@ const TEST_MOMENT = moment(TEST_NOW, 'YYYY-MM-DD-HH:mm')
 
 describe('actions', () => {
     describe('startTask', () => {
+        it('adds an default task and logs', () => {
+            // GIVEN
+            const ctx = prepareContext({}, TEST_NOW, {defaultTask: "default"})
+
+            // WHEN
+            startTask(ctx)()
+
+            // THEN
+            assertStdOut(ctx, `Task default started at 11:12.\n`)
+            assertState(ctx, {
+                days: {
+                    "1981-07-23": [
+                        "11:12|start|default"
+                    ]
+                }
+            })
+        })
+
         it('adds an entry and logs', () => {
+            // GIVEN
+            const ctx = prepareContext({}, TEST_NOW, {defaultTask: "default"})
+
+            // WHEN
+            startTask(ctx)('13:37')
+
+            // THEN
+            assertStdOut(ctx, `Task default started at 13:37.\n`)
+            assertState(ctx, {
+                days: {
+                    "1981-07-23": [
+                        "13:37|start|default"
+                    ]
+                }
+            })
+        })
+
+        it('no valid TimeInput, this must be a task', () => {
             // GIVEN
             const ctx = prepareContext({}, TEST_NOW)
 
             // WHEN
-            startTask(ctx)('eat')
+            startTask(ctx)('eat') 
 
             // THEN
             assertStdOut(ctx, `Task eat started at ${TEST_MOMENT.format("HH:mm")}.\n`)
@@ -32,7 +68,7 @@ describe('actions', () => {
             const ctx = prepareContext({}, TEST_NOW)
 
             // WHEN
-            startTask(ctx)('eat', '13:37')
+            startTask(ctx)('13:37', 'eat')
 
             // THEN
             assertStdOut(ctx, `Task eat started at 13:37.\n`)
