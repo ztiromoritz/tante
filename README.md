@@ -9,7 +9,8 @@ Yet another commandline time tracker
 
 
 # Changelog
-
+## 0.0.9
+commander version bump
 ## 0.0.8
 
 New timeOrTask Option for tante start.

@@ -1,6 +1,6 @@
 {
   "name": "tante",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Yet another cli time-tracker",
   "main": "./index.js",
   "bin": {
@@ -19,7 +19,7 @@
   "license": "ISC",
   "dependencies": {
     "colors": "^1.4.0",
-    "commander": "^6.1.0",
+    "commander": "^12.1.0",
     "moment": "^2.28.0",
     "temp-dir": "^2.0.0",
     "ts-node": "^10.9.1"

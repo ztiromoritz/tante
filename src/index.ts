@@ -149,4 +149,7 @@ program
   .description("Arbitrary new feature to test")
   .action(test(context));
 
+
+//program.configureHelp({subcommandTerm: (cmd)=>cmd.helpInformation()})	
 program.parse(process.argv);
+
