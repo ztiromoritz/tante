@@ -10,10 +10,6 @@ Yet another commandline time tracker
 
 # Changelog
 
-
-## 0.0.9
-A bit of color output for the help.
-
 ## 0.0.8
 
 New timeOrTask Option for tante start.
