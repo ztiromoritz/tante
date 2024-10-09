@@ -9,6 +9,12 @@ Yet another commandline time tracker
 
 
 # Changelog
+
+## 0.0.10
+
+ * Status shows a lot more. Countdown removed.
+ * First param in start can be a time as well.
+
 ## 0.0.9
 commander version bump
 ## 0.0.8

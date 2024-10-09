@@ -29,17 +29,17 @@ const startTask =
     const state = { ...db.readState() };
     const time = isTimeInput(timeOrTask);
     let currentMoment: moment.Moment;
-		let currentTime: string;
+    let currentTime: string;
     if (time) {
       currentMoment = getCurrentMoment(now(), time);
       currentTime = currentMoment.format(TIME_FORMAT);
       task = task || config.defaultTask;
-    }else{
-			// interpret first value as task
-			task = timeOrTask || config.defaultTask;
+    } else {
+      // interpret first value as task
+      task = timeOrTask || config.defaultTask;
       currentMoment = getCurrentMoment(now());
       currentTime = currentMoment.format(TIME_FORMAT);
-		}
+    }
     addEntryToState(state, currentMoment, `start|${task}` as RawEntrySuffix);
     db.writeState(state);
     logger.log(`Task ${task} started at ${currentTime}.`);
@@ -81,13 +81,92 @@ const showStatus =
   ({ logger, db, config, now }: Context) =>
   () => {
     const state = { ...db.readState() };
-    const currentMoment = now();
-    const entries = parseEntries(state, currentMoment);
+    const day = now();
+    const days: Moment[] = getDaysOfThisWeek(day);
+
+    //
+    // Status
+    //
+		logger.log();
+    const entries = parseEntries(state, day);
     if (entries.length === 0 || Boolean(entries.slice(-1)[0].to)) {
       logger.log("No task is running.");
     } else {
       const { name, from } = entries.slice(-1)[0];
       logger.log(`Task '${name}' is running since ${from}.`);
+    }
+		logger.log();
+
+    //
+    // Color Bars
+    //
+    const colorBarHeader = renderColorBarHeader(2, 2);
+    logger.log(colorBarHeader);
+    for (const d of days) {
+      const colorMap = parseColorMap(state, d);
+      const colorBar = renderColorBar(colorMap);
+      logger.log(colorBar);
+    }
+    logger.log(colorBarHeader);
+    logger.log();
+
+    //
+    // Countdown
+    //
+    moment.duration(0).subtract(3, "minutes").get;
+    const getDiff = (value: DurationString, target: DurationString) => {
+      const durationSum = moment.duration(value);
+      //console.log(durationSum);
+      const durationTarget = moment.duration(target);
+      // console.log(durationTarget.format());
+      const diff = durationTarget.subtract(durationSum);
+      return diff;
+    };
+
+    const getCountDownForWeek = (days: Moment[]) => {
+      const targetPerWeek = (config.targetPerWeek || "40:00") as DurationString;
+
+      const state = { ...db.readState() };
+      const allEntries = [];
+      for (let day of days) {
+        const entries = parseEntries(state, day);
+        allEntries.push(...entries);
+      }
+      const sum = formatDuration(sumDuration(allEntries));
+      const diff = getDiff(sum, targetPerWeek);
+      return { sum, diff };
+    };
+
+    const getCountdownForDay = (day: Moment) => {
+      const targetPerDay = (config.targetPerDay || "8:00") as DurationString;
+      const state = { ...db.readState() };
+      const entries = parseEntries(state, day);
+      const sum = formatDuration(sumDuration(entries));
+      const diff = getDiff(sum, targetPerDay);
+      return { sum, diff };
+    };
+
+    {
+      const { sum, diff } = getCountDownForWeek(days);
+      logger.log("Time spent this week " + sum);
+      if (diff.asMinutes() > 0) {
+        logger.log("Time to go           " + formatDuration(diff));
+      } else {
+        logger.log("Overtime             " + formatDuration(diff));
+      }
+    }
+    logger.log();
+    {
+      const { sum, diff } = getCountdownForDay(day);
+      logger.log("Time spent today     " + sum);
+      const finished = day.add(diff, "minutes").format("HH:mm");
+      if (diff.asMinutes() > 0) {
+        logger.log("Time to go           " + formatDuration(diff));
+        logger.log("You are finished     " + finished);
+      } else {
+        logger.log("Overtime             " + formatDuration(diff));
+        logger.log("You were finished    " + finished);
+      }
     }
   };
 
@@ -142,71 +221,6 @@ const archive =
     db.archive({ logger, now });
   };
 
-const countdown =
-  ({ logger, db, config, now }: Context) =>
-  (scope: "day" | "week") => {
-    scope = scope || "day";
-
-    moment.duration(0).subtract(3, "minutes").get;
-    const getDiff = (value: DurationString, target: DurationString) => {
-      const durationSum = moment.duration(value);
-      //console.log(durationSum);
-      const durationTarget = moment.duration(target);
-      // console.log(durationTarget.format());
-      const diff = durationTarget.subtract(durationSum);
-      return diff;
-    };
-
-    const getCountDownForWeek = (days: Moment[]) => {
-      const targetPerWeek = (config.targetPerWeek || "40:00") as DurationString;
-
-      const state = { ...db.readState() };
-      const allEntries = [];
-      for (let day of days) {
-        const entries = parseEntries(state, day);
-        allEntries.push(...entries);
-      }
-      const sum = formatDuration(sumDuration(allEntries));
-      const diff = getDiff(sum, targetPerWeek);
-      return { sum, diff };
-    };
-
-    const getCountdownForDay = (day: Moment) => {
-      const targetPerDay = (config.targetPerDay || "8:00") as DurationString;
-      const state = { ...db.readState() };
-      const entries = parseEntries(state, day);
-      const sum = formatDuration(sumDuration(entries));
-      const diff = getDiff(sum, targetPerDay);
-      return { sum, diff };
-    };
-
-    const day = now();
-    if (scope === "week") {
-      const days: Moment[] = getDaysOfThisWeek(day);
-      const { sum, diff } = getCountDownForWeek(days);
-      logger.log("Time spent this week " + sum);
-      if (diff.asMinutes() > 0) {
-        logger.log("Time to go           " + formatDuration(diff));
-      } else {
-        logger.log("Overtime             " + formatDuration(diff));
-      }
-    } else {
-      if (scope !== "day") {
-        logger.log(`Unknown scope ${scope} fall back to 'day'.`);
-      }
-      const { sum, diff } = getCountdownForDay(day);
-      logger.log("Time spent today   " + sum);
-      const finished = day.add(diff, "minutes").format("HH:mm");
-      if (diff.asMinutes() > 0) {
-        logger.log("Time to go         " + formatDuration(diff));
-        logger.log("You are finished   " + finished);
-      } else {
-        logger.log("Overtime           " + formatDuration(diff));
-        logger.log("You were finished  " + finished);
-      }
-    }
-  };
-
 const STEP_SIZE_IN_MINUTES = 15; //
 function parseColorMap(state: DBState, currentMoment: Moment) {
   const currentDay = currentMoment.format(DAY_FORMAT) as NormalizedDayKey;
@@ -214,7 +228,12 @@ function parseColorMap(state: DBState, currentMoment: Moment) {
   const entries = (function* gen() {
     yield* rawEntries.map((entry) => {
       const [time, action, task] = entry.split("|");
-      return { entry, moment: moment(time, "H:m"), action, task };
+      return {
+        entry,
+        moment: moment(time, "H:m").dayOfYear(currentMoment.dayOfYear()),
+        action,
+        task,
+      };
     });
   })();
 
@@ -255,9 +274,9 @@ const renderColorBarHeader = (gap: number, charPerHour: number) => {
     let hour;
     if (i % gap === 0) hour = ("" + i).padStart(charPerHour);
     else hour = "".padStart(charPerHour);
-    let bgColor: "bgBrightBlue" | "bgBlue" = i % 2 ? "bgBrightBlue" : "bgBlue";
+    let bgColor = i % 2 ? "bgBrightCyan" : "bgCyan";
     // @ts-expect-error typing file contradicts documentation
-    head += colors[bgColor](hour);
+    head += colors["black"][bgColor](hour);
   }
   return head;
 };
@@ -354,9 +373,9 @@ const test =
     logger.log(renderEntries(entries, currentMoment, { sum, sumNumber: "0" }));
 
     // Bar
-    const colorMap = parseColorMap(state, currentMoment);
     const colorBarHeader = renderColorBarHeader(2, 2);
     logger.log(colorBarHeader);
+    const colorMap = parseColorMap(state, currentMoment);
     const colorBar = renderColorBar(colorMap);
     logger.log(colorBar);
   };
@@ -368,7 +387,6 @@ module.exports = {
   toCSV,
   showStatus,
   configure,
-  countdown,
   dump,
   archive,
   test,

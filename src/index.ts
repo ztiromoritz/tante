@@ -20,7 +20,6 @@ const {
   showReport,
   toCSV,
   configure,
-  countdown,
   dump,
   archive,
   test,
@@ -126,11 +125,6 @@ program
   .command("configure")
   .description("Configure")
   .action(configure(context));
-
-program
-  .command("countdown [day|week]")
-  .description("How long do i still have to work today")
-  .action(countdown(context));
 
 program
   .command("dump")
