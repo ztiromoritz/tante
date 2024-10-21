@@ -12,8 +12,10 @@ Yet another commandline time tracker
 
 ## 0.0.10
 
- * Status shows a lot more. Countdown removed.
- * First param in start can be a time as well.
+ * `tante status` shows a lot more. 
+ * `tante countdown` removed. Part of `tante status` now.
+ * First param in `tante start` can be a time as well.
+ * color bars for running task now stop at current moment.
 
 ## 0.0.9
 commander version bump

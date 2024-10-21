@@ -195,7 +195,7 @@ const DOT_DATE_SHORT = /^[0123]?[0-9]\.[01]?[0-9]\.$/;
  *  "2022-12-23",
  *  "23.12.2022",
  *  "23.12.", now has to be given to give to take the current year
- *  "-2", the day before yesterday, now has to be given
+ *  "~2", the day before yesterday, now has to be given
  *  "0", today, now has to be given
  *  "3" or "+3" the day after the day after tomorrow, now has to be given
  */

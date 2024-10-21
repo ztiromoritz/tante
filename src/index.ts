@@ -46,7 +46,7 @@ program
   .action(stopTask(context));
 
 program
-  .command("status")
+  .command("status", {isDefault: true})
   .description("Show current tracking status")
   .action(showStatus(context));
 
@@ -143,7 +143,7 @@ program
   .description("Arbitrary new feature to test")
   .action(test(context));
 
+program.command("*").action(showStatus(context));
 
-//program.configureHelp({subcommandTerm: (cmd)=>cmd.helpInformation()})	
+//program.configureHelp({subcommandTerm: (cmd)=>cmd.helpInformation()})
 program.parse(process.argv);
-

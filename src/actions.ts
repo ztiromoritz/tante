@@ -1,26 +1,24 @@
-import moment, { Moment } from "moment";
-import { DAY_FORMAT, TIME_FORMAT } from "./consts";
 import colors from "colors";
+import moment, { Moment } from "moment";
+import { Context } from ".";
 import {
-  parseEntries,
-  getRawEntries,
-  ensureDay,
   addEntryToState,
-  getCurrentMoment,
-  sumDuration,
-  formatDuration,
-  getDaysOfThisWeek,
-  TimeInput,
   DayInput,
   DurationString,
-  ParsedEntry,
-  parseDayInput,
-  allDaysInRange,
-  parseDayRange,
+  formatDuration,
   formatDurationAsNumber,
+  getCurrentMoment,
+  getDaysOfThisWeek,
+  getRawEntries,
   isTimeInput,
+  parseDayInput,
+  parseDayRange,
+  ParsedEntry,
+  parseEntries,
+  sumDuration,
+  TimeInput,
 } from "./action.utils";
-import { Context } from ".";
+import { DAY_FORMAT, TIME_FORMAT } from "./consts";
 import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
 
 const startTask =
@@ -82,12 +80,14 @@ const showStatus =
   () => {
     const state = { ...db.readState() };
     const day = now();
-    const days: Moment[] = getDaysOfThisWeek(day);
+
+    const lastWeek: Moment[] = getDaysOfThisWeek(day.clone().add(-1, "week"));
+    const thisWeek: Moment[] = getDaysOfThisWeek(day);
 
     //
     // Status
     //
-		logger.log();
+    logger.log();
     const entries = parseEntries(state, day);
     if (entries.length === 0 || Boolean(entries.slice(-1)[0].to)) {
       logger.log("No task is running.");
@@ -95,15 +95,23 @@ const showStatus =
       const { name, from } = entries.slice(-1)[0];
       logger.log(`Task '${name}' is running since ${from}.`);
     }
-		logger.log();
+    logger.log();
 
     //
     // Color Bars
     //
     const colorBarHeader = renderColorBarHeader(2, 2);
     logger.log(colorBarHeader);
-    for (const d of days) {
+    for (const d of lastWeek) {
       const colorMap = parseColorMap(state, d);
+      //console.log({ colorMap });
+      const colorBar = renderColorBar(colorMap);
+      logger.log(colorBar);
+    }
+    logger.log(colorBarHeader);
+    for (const d of thisWeek) {
+      const colorMap = parseColorMap(state, d);
+      //console.log({ colorMap });
       const colorBar = renderColorBar(colorMap);
       logger.log(colorBar);
     }
@@ -147,7 +155,7 @@ const showStatus =
     };
 
     {
-      const { sum, diff } = getCountDownForWeek(days);
+      const { sum, diff } = getCountDownForWeek(thisWeek);
       logger.log("Time spent this week " + sum);
       if (diff.asMinutes() > 0) {
         logger.log("Time to go           " + formatDuration(diff));
@@ -229,18 +237,21 @@ function parseColorMap(state: DBState, currentMoment: Moment) {
     yield* rawEntries.map((entry) => {
       const [time, action, task] = entry.split("|");
       return {
-        entry,
         moment: moment(time, "H:m").dayOfYear(currentMoment.dayOfYear()),
         action,
         task,
-      };
+      } as { action: "start" | "stop"; moment: moment.Moment; task: string };
     });
+    yield {
+      moment: currentMoment.clone(),
+      action: "stop",
+    } as { action: "stop"; moment: moment.Moment };
   })();
 
   const stepMoment = currentMoment.clone().startOf("day");
   let entry = entries.next().value;
   const colorMap = {
-    knownTasks: ["_NONE_"],
+    knownTasks: ["_NONE_", "default", "sick", "holiday"],
     map: [] as number[],
   };
   let currentColor = 0;
@@ -300,14 +311,15 @@ const renderColorBar = (colorMap: { knownTasks: string[]; map: number[] }) => {
     "bgCyan",
     "bgGray",
   ];
-  const CHAR = "▌"; // 1/2 block
+  const CHAR = "▌"; // 1/2 block. U+258C
 
   let out = "";
   for (let i = 0; i < colorMap.map.length; i += 2) {
     const left = colorMap.map[i] - 1;
-    const right = colorMap.map[i + 1] - 1;
+    const right = colorMap.map[i + 1] - 1; //??
     const fgColor = left < 0 ? "white" : fgColors[left % fgColors.length];
-    const bgColor = left < 0 ? "bgWhite" : bgColors[left % fgColors.length];
+    const bgColor = right < 0 ? "bgWhite" : bgColors[right % fgColors.length];
+    //console.log({ fgColor, bgColor });
     // @ts-expect-error typing file contradicts documentation
     out += colors[fgColor][bgColor](CHAR);
   }
