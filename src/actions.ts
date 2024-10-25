@@ -81,8 +81,11 @@ const showStatus =
     const state = { ...db.readState() };
     const day = now();
 
-    const lastWeek: Moment[] = getDaysOfThisWeek(day.clone().add(-1, "week"));
-    const thisWeek: Moment[] = getDaysOfThisWeek(day);
+    const weeks = [];
+    for (let i = -2; i <= 0; i++) {
+      weeks.push(getDaysOfThisWeek(day.clone().add(i, "week")));
+    }
+    const thisWeek = weeks.at(-1) || [];
 
     //
     // Status
@@ -102,20 +105,15 @@ const showStatus =
     //
     const colorBarHeader = renderColorBarHeader(2, 2);
     logger.log(colorBarHeader);
-    for (const d of lastWeek) {
-      const colorMap = parseColorMap(state, d);
-      //console.log({ colorMap });
-      const colorBar = renderColorBar(colorMap);
-      logger.log(colorBar);
+    for (const week of weeks) {
+      for (const d of week) {
+        const colorMap = parseColorMap(state, d);
+        //console.log({ colorMap });
+        const colorBar = renderColorBar(colorMap);
+        logger.log(colorBar);
+      }
+      logger.log(colorBarHeader);
     }
-    logger.log(colorBarHeader);
-    for (const d of thisWeek) {
-      const colorMap = parseColorMap(state, d);
-      //console.log({ colorMap });
-      const colorBar = renderColorBar(colorMap);
-      logger.log(colorBar);
-    }
-    logger.log(colorBarHeader);
     logger.log();
 
     //

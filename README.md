@@ -9,6 +9,8 @@ Yet another commandline time tracker
 
 
 # Changelog
+## 0.0.11
+ * `tante status` one more week
 
 ## 0.0.10
 
