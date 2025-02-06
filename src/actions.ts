@@ -75,6 +75,70 @@ const fullDay =
     );
   };
 
+const showShortStatus =
+  ({ logger, db, config, now }: Context) =>
+  () => {
+    const state = { ...db.readState() };
+    const day = now();
+
+    const entries = parseEntries(state, day);
+    const running = !(entries.length === 0 || Boolean(entries.slice(-1)[0].to));
+    const weeks = [];
+    for (let i = -2; i <= 0; i++) {
+      weeks.push(getDaysOfThisWeek(day.clone().add(i, "week")));
+    }
+    const thisWeek = weeks.at(-1) || [];
+
+    const getDiff = (value: DurationString, target: DurationString) => {
+      const durationSum = moment.duration(value);
+      const durationTarget = moment.duration(target);
+      const diff = durationTarget.subtract(durationSum);
+      return diff;
+    };
+
+    const getCountDownForWeek = (days: Moment[]) => {
+      const targetPerWeek = (config.targetPerWeek || "40:00") as DurationString;
+
+      const state = { ...db.readState() };
+      const allEntries = [];
+      for (let day of days) {
+        const entries = parseEntries(state, day);
+        allEntries.push(...entries);
+      }
+      const sum = formatDuration(sumDuration(allEntries));
+      const diff = getDiff(sum, targetPerWeek);
+      return { sum, diff };
+    };
+
+    const getCountdownForDay = (day: Moment) => {
+      const targetPerDay = (config.targetPerDay || "8:00") as DurationString;
+      const state = { ...db.readState() };
+      const entries = parseEntries(state, day);
+      const sum = formatDuration(sumDuration(entries));
+      const diff = getDiff(sum, targetPerDay);
+      return { sum, diff };
+    };
+
+    let timeSpentToday, timeToGoToday, timeSpentThisWeek, timeToGoThisWeek;
+
+    {
+      const { sum, diff } = getCountDownForWeek(thisWeek);
+      timeSpentThisWeek = sum;
+      timeToGoThisWeek =
+        (diff.asMinutes() > 0 ? "" : "-") + formatDuration(diff);
+    }
+    {
+      const { sum, diff } = getCountdownForDay(day);
+      timeSpentToday = sum;
+      timeToGoToday = (diff.asMinutes() > 0 ? "" : "-") + formatDuration(diff);
+    }
+    //"Short oneline status: {Running|Stopped}|{Time spent today}|{Time to go}|{Time spent this week}|{Time to go this week} \n" +
+    logger.log(
+      `${running ? "Running" : "Stopped"}|${timeSpentToday}|${timeToGoToday}|${timeSpentThisWeek}|${timeToGoThisWeek}`,
+    );
+    process.exit(running ? 0 : 1);
+  };
+
 const showStatus =
   ({ logger, db, config, now }: Context) =>
   () => {
@@ -396,6 +460,7 @@ module.exports = {
   showReport,
   toCSV,
   showStatus,
+  showShortStatus,
   configure,
   dump,
   archive,

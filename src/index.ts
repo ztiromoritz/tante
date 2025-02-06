@@ -17,6 +17,7 @@ const {
   startTask,
   stopTask,
   showStatus,
+  showShortStatus,
   showReport,
   toCSV,
   configure,
@@ -46,9 +47,21 @@ program
   .action(stopTask(context));
 
 program
-  .command("status", {isDefault: true})
-  .description("Show current tracking status")
+  .command("status", { isDefault: true })
+  .option(
+    "--short",
+    "Short oneline status: {Running|Stopped}|{Time spent today}|{Time to go}|{Time spent this week}|{Time to go this week}",
+  )
+  .description("Show current tracking status.")
   .action(showStatus(context));
+
+program
+  .command("short-status")
+  .description(
+    "Short oneline status: {Running|Stopped}|{Time spent today}|{Time to go}|{Time spent this week}|{Time to go this week} \n" +
+      "Exit Code 0 (Running), Exit Code 1 (Not Running)",
+  )
+  .action(showShortStatus(context));
 
 const fullDayDescription = (fullDayType: string) => {
   return `Set a full workday amount of hours to the given day as ${fullDayType}
