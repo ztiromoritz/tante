@@ -1,4 +1,4 @@
-const db = require("../src/db");
+const db = require("../src/actions/db");
 const { config } = require("../src/config");
 const fs = require("fs");
 const assert = require("assert");
@@ -23,7 +23,7 @@ describe("db", () => {
     } else {
       assert(
         false,
-        "Test does not use temp directory. Set env variable TANTE_USE_TEST_HOME=true."
+        "Test does not use temp directory. Set env variable TANTE_USE_TEST_HOME=true.",
       );
     }
   });
@@ -46,7 +46,7 @@ describe("db", () => {
     // THEN
     assert(
       fs.existsSync(config.getDatabaseFile()),
-      "Database file does not exist."
+      "Database file does not exist.",
     );
     const content = fs.readFileSync(config.getDatabaseFile());
     assert.deepEqual(JSON.parse(content), { a: "b" });
@@ -61,7 +61,7 @@ describe("db", () => {
     const ctx = prepareContext({}, TEST_NOW);
 
     // WHEN
-    db.archive(ctx);
+    db.archiveDb(ctx);
 
     // THEN
     assert(fs.existsSync(filename), "No db file left.");
@@ -73,8 +73,8 @@ describe("db", () => {
   it("No archive twice", () => {
     const filename = config.getDatabaseFile();
     const ctx = prepareContext({}, TEST_NOW);
-    db.archive(ctx);
-    db.archive(ctx);
+    db.archiveDb(ctx);
+    db.archiveDb(ctx);
 
     // THEN
     assertStdError(ctx, "There was already an archive created today.\n");

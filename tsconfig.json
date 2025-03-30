@@ -11,6 +11,14 @@
     "moduleResolution": "node",
     "allowJs": true
   },
-  "include": ["src/**/*.js", "src/**/*.ts", "src/**/*.d.ts", "src/index.tsx.ts", "index.ts", "src/db.zs"],
+  "include": [
+    "src/**/*.js",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/index.tsx.ts",
+    "index.ts",
+    "src/db.zs"
+  ],
   "exclude": ["node_modules", "dist", "test"]
 }
+

@@ -7,8 +7,13 @@ Yet another commandline time tracker
 
 # Usage
 
-
 # Changelog
+
+## 0.0.13 
+ * `tante xxx [from] [to]` can now be something like `tante xxx 01.10. =` for a range containing only one day 
+ * `tante addup` for an accumulative over/undertime report and a weeky overview in one line
+ * `tante set start/stop` to add entries on another day
+
 ## 0.0.12
  * `tante short-status` for bar integration
 
@@ -24,6 +29,7 @@ Yet another commandline time tracker
 
 ## 0.0.9
 commander version bump
+
 ## 0.0.8
 
 New timeOrTask Option for tante start.

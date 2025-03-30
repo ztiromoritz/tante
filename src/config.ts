@@ -1,5 +1,5 @@
-const fs = require("fs");
-const tempDir = require("temp-dir");
+import { existsSync, readFileSync, mkdirSync } from "fs";
+import tempDir from "temp-dir";
 
 const tanteHomeDir =
   process.env.TANTE_USE_TEST_HOME === "true"
@@ -18,17 +18,17 @@ const DEFAULT_CONFIG = {
 };
 
 function ensureDirs() {
-  if (!fs.existsSync(tanteHomeDir)) {
-    fs.mkdirSync(tanteHomeDir);
+  if (!existsSync(tanteHomeDir)) {
+    mkdirSync(tanteHomeDir);
   }
-  if (!fs.existsSync(databaseDir)) {
-    fs.mkdirSync(databaseDir);
+  if (!existsSync(databaseDir)) {
+    mkdirSync(databaseDir);
   }
 }
 
 function loadConfigFile() {
-  if (fs.existsSync(configFile)) {
-    return JSON.parse(fs.readFileSync(configFile));
+  if (existsSync(configFile)) {
+    return JSON.parse(readFileSync(configFile).toString());
   } else {
     return {};
   }
@@ -52,8 +52,9 @@ function readConfig() {
   return Object.freeze(
     Object.assign<typeof initialConfig, typeof DEFAULT_CONFIG>(
       initialConfig,
-      loadConfigFile()
-    )
+      loadConfigFile(),
+    ),
   );
 }
+
 export const config = readConfig();

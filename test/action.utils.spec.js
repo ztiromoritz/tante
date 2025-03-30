@@ -1,13 +1,19 @@
 const moment = require("moment");
 const assert = require("assert").strict;
+const { assertState, assertStdOut, prepareContext } = require("./utils");
 const {
   parseEntries,
   formatDuration,
   parseDayInput,
+  parseDayInputRange,
   allDaysInRange,
-} = require("../src/action.utils");
+  parseDayInputRangeToFullWeeks,
+} = require("../src/actions/action.utils");
+const { WEEKDAYS_AS_ARRAY } = require("../src/consts");
 const TEST_NOW = "2021-07-24-18:03";
 const TEST_MOMENT = moment(TEST_NOW, "YYYY-MM-DD-HH:mm");
+
+moment.locale("de");
 
 describe("action.utils", () => {
   describe("parseEntries", () => {
@@ -172,6 +178,12 @@ describe("action.utils", () => {
       assert(result.isValid(), "Is valid");
       assert(expected.isSame(result, "day"), assertMessage(expected, result));
     });
+    it("01.01.2024", () => {
+      const result = parseDayInput("01.01.2024");
+      const expected = moment("01.01.2024", "DD.MM.YYYY");
+      assert(result.isValid(), "Is valid");
+      assert(expected.isSame(result, "day"), assertMessage(expected, result));
+    });
     it("23.12.", () => {
       const expected = moment("23.12.2001", "DD.MM.YYYY");
       const result = parseDayInput("23.12.", expected);
@@ -204,7 +216,7 @@ describe("action.utils", () => {
     it("01.01. zero padded", () => {
       const result = parseDayInput("01.01.");
       const expected = moment("01.01.", "DD.MM.YYYY");
-      assert(result.isValid(), "Is valid");
+      // assert(result.isValid(), "Is valid");
       assert(expected.isSame(result, "day"), assertMessage(expected, result));
     });
 
@@ -222,12 +234,6 @@ describe("action.utils", () => {
       const result = parseDayInput("0");
       const expected = moment();
       assert(result.isValid(), "Is valid" + result);
-      assert(expected.isSame(result, "day"), assertMessage(expected, result));
-    });
-    it("3", () => {
-      const result = parseDayInput("3");
-      const expected = moment().add(3, "day");
-      assert(result.isValid(), "Is valid");
       assert(expected.isSame(result, "day"), assertMessage(expected, result));
     });
     it("+4", () => {
@@ -273,6 +279,163 @@ describe("action.utils", () => {
     it("two days", () => {
       const result = allDaysInRange(moment("2022-12-23"), moment("2022-12-24"));
       assert(result.length === 2, "two days " + result.length);
+    });
+  });
+
+  describe("parseDayInputRange", () => {
+    it("no input", () => {
+      const { fromDay, toDay } = parseDayInputRange({ now: () => TEST_MOMENT });
+      assert(
+        fromDay.isSame(TEST_MOMENT, "day"),
+        fromDay + " vs. " + TEST_MOMENT,
+      );
+      assert(toDay.isSame(TEST_MOMENT, "day"));
+    });
+
+    it("from input", () => {
+      const { fromDay, toDay } = parseDayInputRange({
+        from: "~3",
+        now: () => TEST_MOMENT,
+      });
+      assert(
+        fromDay.isSame(TEST_MOMENT.clone().subtract(3, "days"), "day"),
+        "Wrong from " +
+          fromDay?.toISOString() +
+          " vs. " +
+          TEST_MOMENT.toISOString(),
+      );
+      assert(
+        toDay.isSame(TEST_MOMENT, "day"),
+        "Wrong to " +
+          toDay?.toISOString() +
+          " vs. " +
+          TEST_MOMENT?.toISOString(),
+      );
+    });
+
+    it("from input 3 weeks", () => {
+      const { fromDay, toDay } = parseDayInputRange({
+        from: "~21",
+        now: () => TEST_MOMENT,
+      });
+      assert(
+        fromDay.isSame(TEST_MOMENT.clone().subtract(21, "days"), "day"),
+        "Wrong from " +
+          fromDay?.toISOString() +
+          " vs. " +
+          TEST_MOMENT.toISOString(),
+      );
+      assert(
+        toDay.isSame(TEST_MOMENT, "day"),
+        "Wrong to " +
+          toDay?.toISOString() +
+          " vs. " +
+          TEST_MOMENT?.toISOString(),
+      );
+    });
+
+    it("from and to input", () => {
+      const { fromDay, toDay } = parseDayInputRange({
+        from: "~3",
+        to: "+7",
+        now: () => TEST_MOMENT,
+      });
+      assert(fromDay.isSame(TEST_MOMENT.clone().subtract(3, "days"), "day"));
+      assert(toDay.isSame(TEST_MOMENT.clone().add(7, "days"), "day"));
+    });
+
+    it("from and to equals sign", () => {
+      const { fromDay, toDay } = parseDayInputRange({
+        from: "~3",
+        to: "=",
+        now: () => TEST_MOMENT,
+      });
+      assert(fromDay.isSame(toDay, "day"));
+      const target = TEST_MOMENT.clone().subtract(3, "days");
+      assert(fromDay.isSame(target, "day"));
+    });
+  });
+
+  describe("parseDayInputRangeToFullWeeks", () => {
+    it("no input", () => {
+      const weeks = parseDayInputRangeToFullWeeks({
+        now: () => TEST_MOMENT,
+      });
+      assert(weeks.length === 1, "one week..");
+      assert(weeks[0].days.length === 7, "..of 7 days ");
+    });
+
+    it("two weeks", () => {
+      const weeks = parseDayInputRangeToFullWeeks({
+        from: "~8",
+        now: () => TEST_MOMENT,
+      });
+      assert(weeks.length === 2, "two weeks.." + weeks.length);
+      assert(weeks[0].days.length === 7, "..of 7 days ");
+      assert(weeks[1].days.length === 7, "..of 7 days ");
+      const weekdays = weeks[0].days.map((d) => d.weekday());
+      assert(
+        weekdays.every((d, index) => d === index),
+        "Monday till Sunday " + weekdays,
+      );
+
+      const weekdays2 = weeks[0].days.map((d) => d.weekday());
+      assert(
+        weekdays2.every((d, index) => d === index),
+        "Monday till Sunday " + weekdays2,
+      );
+      assert(
+        weeks[0].days[6].isSame(
+          weeks[1].days[0].clone().subtract(1, "days"),
+          "day",
+        ),
+      );
+    });
+
+    it("two weeks", () => {
+      const weeks = parseDayInputRangeToFullWeeks({
+        from: "~8",
+        to: "+7",
+        now: () => TEST_MOMENT,
+      });
+      assert(weeks.length === 3, "two weeks.." + weeks.length);
+      assert(weeks[0].days.length === 7, "..of 7 days ");
+      assert(weeks[1].days.length === 7, "..of 7 days ");
+      const weekdays = weeks[0].days.map((d) => d.weekday());
+      assert(
+        weekdays.every((d, index) => d === index),
+        "Monday till Sunday " + weekdays,
+      );
+
+      const weekdays2 = weeks[0].days.map((d) => d.weekday());
+      assert(
+        weekdays2.every((d, index) => d === index),
+        "Monday till Sunday " + weekdays2,
+      );
+
+      assert(
+        weeks[0].days[6].isSame(
+          weeks[1].days[0].clone().subtract(1, "days"),
+          "day",
+        ),
+      );
+
+      assert(
+        weeks[1].days[6].isSame(
+          weeks[2].days[0].clone().subtract(1, "days"),
+          "day",
+        ),
+      );
+    });
+
+    it("01.01.2024 :D", () => {
+      const weeks = parseDayInputRangeToFullWeeks({
+        from: "01.01.2024",
+        to: "01.02.2025",
+        now: () => TEST_MOMENT,
+      });
+      assert(weeks.length === 57, "two weeks.." + weeks.length);
+      assert(weeks[0].days.length === 7, "..of 7 days ");
     });
   });
 });

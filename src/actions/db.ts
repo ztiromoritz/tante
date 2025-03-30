@@ -1,8 +1,8 @@
 import fs from "fs";
-import { Context } from ".";
+import { Context } from "../";
 import { TimeInput } from "./action.utils";
-import { config } from "./config";
-import { Brand } from "./util-types";
+import { config } from "../config";
+import { Brand } from "../util-types";
 
 export type RawEntrySuffix = Brand<string, "RawEntryPrefix">; // start|mxx
 // Todo: Template types seems to not keep the brands
@@ -15,14 +15,14 @@ export type DBState = {
   };
 };
 
-function ensureDbFile() {
+export function ensureDbFile() {
   const filename = config.getDatabaseFile();
   if (!fs.existsSync(filename)) {
     fs.writeFileSync(filename, '{"version":"alpha","days":{}}');
   }
 }
 
-function archive({ logger, now }: Context) {
+export function archiveDb({ logger, now }: Context) {
   const mainFilename = config.getDatabaseFile();
   const currentMoment = now();
   const suffix = currentMoment.format("-YYYY-MM-DD");
@@ -37,7 +37,7 @@ function archive({ logger, now }: Context) {
   }
 }
 
-function readState() {
+export function readState() {
   // currently a single file is used
   ensureDbFile();
   const filename = config.getDatabaseFile();
@@ -45,9 +45,28 @@ function readState() {
   return JSON.parse(dataFile.toString());
 }
 
-function writeState(changedState: any) {
+export function writeState(changedState: any) {
   const filename = config.getDatabaseFile();
   fs.writeFileSync(filename, JSON.stringify(changedState, null, 1));
 }
 
-module.exports = { readState, writeState, archive };
+/**ACTIONS **/
+export const configure =
+  ({ logger, db, config }: Context) =>
+  () => {
+    logger.log(`Database file : ${config.getDatabaseFile()}`);
+    logger.log(`Config file   : ${config.getConfigFile()}`);
+    logger.log(`Configuration :\n${JSON.stringify(config, null, 2)}`);
+  };
+
+export const dump =
+  ({ logger, db }: Context) =>
+  () => {
+    logger.log(JSON.stringify(db.readState(), null, 2));
+  };
+
+export const archive = (ctx: Context) => () => {
+  // creates an archive file of the current db
+  // and inits with a fresh db
+  ctx.db.archiveDb(ctx);
+};

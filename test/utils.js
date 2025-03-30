@@ -9,6 +9,15 @@ const assertStdOut = (context, expectedStr) => {
   assert.equal(context._.stdOut, expectedStr);
 };
 
+const assertStdOutStartsWith = (context, expectedStr) => {
+  assert(
+    context._.stdOut?.startsWith(expectedStr) ?? false,
+    context._.stdOut?.substring(0, 50) +
+      "\n   dont starts with  \n" +
+      expectedStr,
+  );
+};
+
 const assertStdError = (context, expectedStr) => {
   assert.equal(context._.stdError, expectedStr);
 };
@@ -43,4 +52,10 @@ const prepareContext = (inputState, currentTime, _config) => {
   };
 };
 
-module.exports = { assertState, assertStdOut, assertStdError, prepareContext };
+module.exports = {
+  assertState,
+  assertStdOut,
+  assertStdError,
+  prepareContext,
+  assertStdOutStartsWith,
+};

@@ -1,10 +1,10 @@
 import moment, { Moment, Duration, duration } from "moment";
-import { Context } from ".";
-import { config } from "./config";
+import { config } from "../config";
 import { DBState, NormalizedDayKey, RawEntrySuffix } from "./db";
-import { Brand } from "./util-types";
-const { DAY_FORMAT, TIME_FORMAT } = require("./consts");
+import { Brand } from "../util-types";
+import { DB_DAY_FORMAT, TIME_FORMAT } from "../consts";
 
+import colors from "colors";
 export type TimeInput = Brand<string, "TimeInput">; // format like '03:00' or '9:23'  see consts.TIME_FORMAT
 export type DayInput = Brand<string, "DayInput">; // formats like '2022-11-23' or '23.11' or '23.11.2022' or "~2" for the day before yesterday???
 export type DurationString = Brand<string, "DurationString">; // format 40:22
@@ -17,17 +17,21 @@ export type ParsedEntry = {
   durationNow?: string;
 };
 
-export const formatDuration = (duration: Duration): DurationString => {
-  if (duration.asMinutes() > 0) {
+export const formatDuration = (
+  duration: Duration,
+  opts?: { signed: boolean },
+): DurationString => {
+  const { signed = false } = opts || {};
+  if (duration.asMinutes() >= 0) {
     const hours = Math.floor(duration.asMinutes() / 60);
     const minutes = duration.asMinutes() % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
+    return `${signed ? " " : ""}${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}` as DurationString;
   } else {
     const hours = Math.floor(-duration.asMinutes() / 60);
     const minutes = -duration.asMinutes() % 60;
-    return `${hours.toString().padStart(2, "0")}:${minutes
+    return `${signed ? "-" : ""}${hours.toString().padStart(2, "0")}:${minutes
       .toString()
       .padStart(2, "0")}` as DurationString;
   }
@@ -57,8 +61,11 @@ export const sumDuration = (entries: ParsedEntry[]) => {
   return durationSum;
 };
 
-export const parseEntries = (state: DBState, currentMoment: Moment) => {
-  const currentDay = currentMoment.format(DAY_FORMAT) as NormalizedDayKey;
+export const parseEntries = (
+  state: DBState,
+  currentMoment: Moment,
+): ParsedEntry[] => {
+  const currentDay = currentMoment.format(DB_DAY_FORMAT) as NormalizedDayKey;
   const currentTime = currentMoment.format(TIME_FORMAT) as TimeInput;
   const rawEntries = getRawEntries(state, currentDay);
   const entries: ParsedEntry[] = [];
@@ -151,7 +158,7 @@ export const addEntryToState = (
   currentMoment: Moment,
   entry: RawEntrySuffix,
 ) => {
-  const currentDay = currentMoment.format(DAY_FORMAT) as NormalizedDayKey;
+  const currentDay = currentMoment.format(DB_DAY_FORMAT) as NormalizedDayKey;
   const currentTime = currentMoment.format(TIME_FORMAT);
 
   const entries = ensureDay(state, currentDay);
@@ -177,11 +184,12 @@ export const getRawEntries = (state: DBState, currentDay: NormalizedDayKey) => {
   return [];
 };
 
-export const getDaysOfThisWeek = (day: Moment) => {
+export const getDaysOfThisWeek = (day: Moment, opts?: { weekend: boolean }) => {
+  const { weekend = false } = opts || {};
   const todayIndex = day.day();
   const monday = day.clone().subtract(todayIndex - 1, "days");
   const days = [];
-  for (let n = 0; n < 5; n++) {
+  for (let n = 0; n < 5 + (weekend ? 2 : 0); n++) {
     days.push(monday.clone().add(n, "days"));
   }
   return days;
@@ -207,14 +215,14 @@ export const parseDayInput = (input: DayInput, now?: Moment): Moment => {
   }
 
   if (DOT_DATE.test(input)) {
-    result = moment(input, "D.M.YYYY", true);
+    result = moment(input, "D.M.YYYY", false);
     if (result && result.isValid()) {
       return result;
     }
   }
 
   if (DOT_DATE_SHORT.test(input)) {
-    result = moment(input, "D.M.", true);
+    result = moment(input, "D.M.", false);
     if (result && result.isValid() && now) {
       result.set("year", now.get("year"));
       return result;
@@ -227,6 +235,7 @@ export const parseDayInput = (input: DayInput, now?: Moment): Moment => {
   }
   return moment.invalid(); // or throw error
 };
+
 export const allDaysInRange = (from: Moment, to: Moment): Moment[] => {
   const result: Moment[] = [];
   to = to ?? moment();
@@ -238,32 +247,136 @@ export const allDaysInRange = (from: Moment, to: Moment): Moment[] => {
   return result;
 };
 
-export const parseDayRange = (opts: {
+export const parseDayInputRange = (opts: {
   from: DayInput;
   to: DayInput;
   now: () => Moment;
 }) => {
   const { from, to, now } = opts;
-  const days = [];
+  let fromDay: Moment;
+  let toDay: Moment;
+  const nowDay = now();
   if (from && to) {
-    const fromDay = parseDayInput(from);
-    const toDay = parseDayInput(to);
+    fromDay = parseDayInput(from, nowDay);
+    if (to === "=") {
+      toDay = fromDay.clone();
+    } else {
+      toDay = parseDayInput(to, nowDay);
+    }
     if (!fromDay.isValid()) {
       throw new Error(" [from] is not valid " + from);
     }
     if (!toDay.isValid()) {
       throw new Error(" [to] is not valid " + to);
     }
-    days.push(...allDaysInRange(fromDay, toDay));
   } else if (from) {
-    const fromDay = parseDayInput(from);
-    const toDay = now();
+    fromDay = parseDayInput(from, nowDay);
+    toDay = now();
     if (!fromDay.isValid()) {
       throw new Error(" [from] is not valid " + from);
     }
-    days.push(...allDaysInRange(fromDay, toDay));
   } else {
-    days.push(now());
+    fromDay = nowDay;
+    toDay = nowDay;
   }
-  return days;
+  return { fromDay, toDay };
+};
+
+export const parseDayRange = (opts: {
+  from: DayInput;
+  to: DayInput;
+  now: () => Moment;
+}) => {
+  const { fromDay, toDay } = parseDayInputRange(opts);
+  return [...allDaysInRange(fromDay, toDay)];
+};
+
+export const parseDayInputRangeToFullWeeks = (opts: {
+  from: DayInput;
+  to: DayInput;
+  now: () => Moment;
+}) => {
+  const weeks: { days: Moment[] }[] = []; // all Full weeks monday till friday
+
+  const { fromDay, toDay } = parseDayInputRange(opts);
+  let first_day_of_the_week: Moment;
+  let last_day_of_the_week: Moment;
+  let curr: Moment = fromDay;
+  do {
+    first_day_of_the_week = curr.clone().weekday(0); // Monday for de, Sunday for en etc.
+    last_day_of_the_week = curr.clone().weekday(6);
+    weeks.push({
+      days: [...allDaysInRange(first_day_of_the_week, last_day_of_the_week)],
+    });
+    curr = curr.clone().add(7, "days");
+  } while (curr.isBefore(toDay));
+
+  return weeks;
+};
+
+export const getDurationDiff = (
+  value: DurationString,
+  target: DurationString,
+) => {
+  const durationSum = moment.duration(value);
+  //console.log(durationSum);
+  const durationTarget = moment.duration(target);
+  // console.log(durationTarget.format());
+  const diff = durationTarget.subtract(durationSum);
+  return diff;
+};
+
+export type DayMode =
+  | "work"
+  | "holiday"
+  | "sick"
+  | "weekend"
+  | "empty"
+  | "weekend-work"
+  | "error-sick-and-more"
+  | "error-holiday-and-more"
+  | "error-unstopped-last-entry";
+
+export const SHORT_MODES: Record<DayMode, string> = {
+  work: colors["bgWhite"]["black"]("■ "),
+  holiday: colors["bgWhite"]["black"]("h "),
+  sick: colors["bgWhite"]["black"]("s "),
+  empty: colors["bgWhite"]["black"]("  "),
+  weekend: colors["bgYellow"]("  "),
+  ["weekend-work"]: colors["bgYellow"]["red"]("■ "),
+  ["error-sick-and-more"]: colors["bgRed"]["black"]("s*"),
+  ["error-holiday-and-more"]: colors["bgRed"]["black"]("h*"),
+  ["error-unstopped-last-entry"]: colors["bgRed"]["black"]("[*"),
+};
+/**
+ *
+ **/
+export const dayMode = (
+  day: moment.Moment,
+  parsedEntries: ParsedEntry[],
+): DayMode => {
+  if ([5, 6].includes(day.weekday())) {
+    return "weekend";
+  }
+
+  if (parsedEntries.length === 0) {
+    return "empty";
+  }
+
+  if (
+    parsedEntries.find((entry) => entry.name === "sick") &&
+    parsedEntries.length === 1
+  ) {
+    if (parsedEntries.length === 1) return "sick";
+    return "error-sick-and-more";
+  }
+
+  if (parsedEntries.find((entry) => entry.name === "holiday")) {
+    if (parsedEntries.length === 1) return "holiday";
+    return "error-holiday-and-more";
+  }
+
+  if (!parsedEntries[parsedEntries.length - 1].to)
+    return "error-unstopped-last-entry";
+  return "work";
 };
